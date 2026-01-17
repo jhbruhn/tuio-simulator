@@ -1,12 +1,41 @@
 use crate::state::{AppState, ServerStatus, TuioObject};
+use crate::tuio::frame::generate_frame;
+use std::time::Duration;
 use tauri::State;
 
 #[tauri::command]
 pub async fn start_server(state: State<'_, AppState>, port: u16) -> Result<(), String> {
+    // Check if already running
+    {
+        let running = state.server_running.lock();
+        if *running {
+            return Err("Server is already running".to_string());
+        }
+    }
+
     // Update config
     {
         let mut config = state.config.lock();
         config.port = port;
+    }
+
+    // Start WebSocket server
+    state
+        .websocket_server
+        .start(port)
+        .await
+        .map_err(|e| format!("Failed to start WebSocket server: {}", e))?;
+
+    // Start frame generation task
+    let state_clone = state.inner().clone();
+    let task = tokio::spawn(async move {
+        frame_generation_loop(state_clone).await;
+    });
+
+    // Store task handle
+    {
+        let mut frame_task = state.frame_task.lock();
+        *frame_task = Some(task);
     }
 
     // Set server running flag
@@ -15,22 +44,27 @@ pub async fn start_server(state: State<'_, AppState>, port: u16) -> Result<(), S
         *running = true;
     }
 
-    // TODO: Actually start the WebSocket server
-    // This will be implemented in the websocket module
-
     Ok(())
 }
 
 #[tauri::command]
 pub async fn stop_server(state: State<'_, AppState>) -> Result<(), String> {
-    // Set server running flag
+    // Set server running flag (this will stop the frame generation loop)
     {
         let mut running = state.server_running.lock();
         *running = false;
     }
 
-    // TODO: Actually stop the WebSocket server
-    // This will be implemented in the websocket module
+    // Abort the frame generation task
+    {
+        let mut frame_task = state.frame_task.lock();
+        if let Some(task) = frame_task.take() {
+            task.abort();
+        }
+    }
+
+    // Note: WebSocket server will continue accepting connections
+    // but frames will stop being generated/broadcast
 
     Ok(())
 }
@@ -129,7 +163,7 @@ pub async fn set_frame_rate(state: State<'_, AppState>, fps: u32) -> Result<(), 
 pub async fn get_server_status(state: State<'_, AppState>) -> Result<ServerStatus, String> {
     let running = *state.server_running.lock();
     let config = state.config.lock();
-    let connected_clients = *state.connected_clients.lock();
+    let connected_clients = state.get_connected_clients();
     let frame_count = *state.frame_counter.lock();
     let object_count = state.objects.lock().len();
 
@@ -141,6 +175,41 @@ pub async fn get_server_status(state: State<'_, AppState>) -> Result<ServerStatu
         frame_count,
         object_count,
     })
+}
+
+/// Frame generation loop that runs continuously while the server is running
+async fn frame_generation_loop(state: AppState) {
+    loop {
+        // Check if server is still running
+        {
+            let running = state.server_running.lock();
+            if !*running {
+                break;
+            }
+        }
+
+        // Generate frame
+        match generate_frame(&state) {
+            Ok(frame_data) => {
+                // Broadcast to all connected clients
+                if let Err(e) = state.websocket_server.broadcast(frame_data).await {
+                    eprintln!("Error broadcasting frame: {}", e);
+                }
+            }
+            Err(e) => {
+                eprintln!("Error generating frame: {}", e);
+            }
+        }
+
+        // Sleep based on configured FPS
+        let fps = {
+            let config = state.config.lock();
+            config.fps
+        };
+
+        let interval_ms = 1000 / fps.max(1);
+        tokio::time::sleep(Duration::from_millis(interval_ms as u64)).await;
+    }
 }
 
 #[tauri::command]

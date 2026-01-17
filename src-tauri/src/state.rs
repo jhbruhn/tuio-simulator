@@ -1,7 +1,9 @@
+use crate::websocket::WebSocketServer;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
+use tokio::task::JoinHandle;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TuioObject {
@@ -52,13 +54,15 @@ pub struct ServerStatus {
     pub object_count: usize,
 }
 
+#[derive(Clone)]
 pub struct AppState {
     pub objects: Arc<Mutex<HashMap<u32, TuioObject>>>,
     pub next_session_id: Arc<Mutex<u32>>,
     pub frame_counter: Arc<Mutex<u32>>,
     pub config: Arc<Mutex<Config>>,
     pub server_running: Arc<Mutex<bool>>,
-    pub connected_clients: Arc<Mutex<usize>>,
+    pub websocket_server: Arc<WebSocketServer>,
+    pub frame_task: Arc<Mutex<Option<JoinHandle<()>>>>,
 }
 
 impl AppState {
@@ -69,8 +73,13 @@ impl AppState {
             frame_counter: Arc::new(Mutex::new(0)),
             config: Arc::new(Mutex::new(Config::default())),
             server_running: Arc::new(Mutex::new(false)),
-            connected_clients: Arc::new(Mutex::new(0)),
+            websocket_server: Arc::new(WebSocketServer::new()),
+            frame_task: Arc::new(Mutex::new(None)),
         }
+    }
+
+    pub fn get_connected_clients(&self) -> usize {
+        self.websocket_server.get_connected_clients()
     }
 
     pub fn allocate_session_id(&self) -> u32 {
