@@ -26,6 +26,7 @@ serde_json = "1"
 # TUIO Protocol & WebSocket
 tokio = { version = "1", features = ["full"] }
 tokio-tungstenite = "0.21"
+futures-util = "0.3"
 rosc = "0.10"
 
 # Utilities

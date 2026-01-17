@@ -1,6 +1,7 @@
 mod commands;
 mod state;
 mod tuio;
+mod websocket;
 
 use state::AppState;
 
