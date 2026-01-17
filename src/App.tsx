@@ -8,6 +8,8 @@ function App() {
   const [canvasWidth] = useState(1920);
   const [canvasHeight] = useState(1080);
   const [showGrid, setShowGrid] = useState(true);
+  // Scale down canvas to fit viewport (60% of actual size)
+  const [canvasScale] = useState(0.6);
 
   const {
     objects,
@@ -72,117 +74,138 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">TUIO 2.0 Simulator</h1>
+    <div className="flex h-screen bg-gray-900">
+      {/* Sidebar Controls */}
+      <div className="w-80 bg-gray-800 text-white p-4 overflow-y-auto">
+        <h1 className="text-2xl font-bold mb-6">TUIO Simulator</h1>
 
-        {/* Control Panel */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Server Controls</h2>
+        {/* Server Controls */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold mb-3">Server</h2>
 
-          <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="space-y-3">
             <div>
-              <label className="block text-sm font-medium mb-2">Port</label>
+              <label className="block text-sm mb-1">Port</label>
               <input
                 type="number"
                 value={port}
                 disabled={isRunning}
-                className="w-full px-3 py-2 border rounded disabled:bg-gray-100"
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white disabled:opacity-50"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">FPS</label>
+              <label className="block text-sm mb-1">FPS</label>
               <input
                 type="number"
                 value={fps}
                 onChange={(e) => setFps(parseInt(e.target.value))}
                 min="1"
                 max="120"
-                className="w-full px-3 py-2 border rounded"
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
               />
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 mt-3">
             <button
               onClick={handleStartServer}
               disabled={isRunning}
-              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-300"
+              className="flex-1 px-3 py-2 bg-green-600 rounded hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-sm font-medium"
             >
-              Start Server
+              Start
             </button>
             <button
               onClick={handleStopServer}
               disabled={!isRunning}
-              className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:bg-gray-300"
+              className="flex-1 px-3 py-2 bg-red-600 rounded hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-sm font-medium"
             >
-              Stop Server
+              Stop
             </button>
           </div>
 
-          <div className="mt-4 grid grid-cols-3 gap-4 text-sm">
-            <div>
-              <span className="font-medium">Status:</span>{" "}
-              <span className={isRunning ? "text-green-600" : "text-red-600"}>
+          <div className="mt-3 pt-3 border-t border-gray-700 space-y-1 text-sm">
+            <div className="flex justify-between">
+              <span>Status:</span>
+              <span className={isRunning ? "text-green-400" : "text-red-400"}>
                 {isRunning ? "Running" : "Stopped"}
               </span>
             </div>
-            <div>
-              <span className="font-medium">Clients:</span> {connectedClients}
+            <div className="flex justify-between">
+              <span>Clients:</span>
+              <span>{connectedClients}</span>
             </div>
-            <div>
-              <span className="font-medium">Frames:</span> {frameCount}
+            <div className="flex justify-between">
+              <span>Frames:</span>
+              <span>{frameCount}</span>
             </div>
           </div>
         </div>
 
         {/* Object Controls */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Object Controls</h2>
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold mb-3">Objects</h2>
 
-          <div className="flex gap-2">
+          <div className="space-y-2">
             <button
               onClick={handleAddObject}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              className="w-full px-3 py-2 bg-blue-600 rounded hover:bg-blue-700 text-sm font-medium"
             >
-              Add Object
+              + Add Object
             </button>
             <button
               onClick={handleRemoveSelected}
               disabled={selectedObjects.size === 0}
-              className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:bg-gray-300"
+              className="w-full px-3 py-2 bg-red-600 rounded hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-sm font-medium"
             >
-              Remove Selected ({selectedObjects.size})
+              Remove ({selectedObjects.size})
             </button>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={showGrid}
-                onChange={(e) => setShowGrid(e.target.checked)}
-              />
-              <span>Show Grid</span>
-            </label>
           </div>
 
-          <div className="mt-4 text-sm">
-            <span className="font-medium">Objects:</span> {objects.length}
+          <div className="mt-3 pt-3 border-t border-gray-700 space-y-1 text-sm">
+            <div className="flex justify-between">
+              <span>Total:</span>
+              <span>{objects.length}</span>
+            </div>
             {interactionState.selectedId && (
-              <span className="ml-4">
-                <span className="font-medium">Selected:</span> {interactionState.selectedId}
-              </span>
+              <div className="flex justify-between">
+                <span>Selected:</span>
+                <span>#{interactionState.selectedId}</span>
+              </div>
             )}
           </div>
+
+          <label className="flex items-center gap-2 mt-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showGrid}
+              onChange={(e) => setShowGrid(e.target.checked)}
+              className="w-4 h-4"
+            />
+            <span className="text-sm">Show Grid</span>
+          </label>
         </div>
 
-        {/* Canvas */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">Canvas</h2>
+        {/* Instructions */}
+        <div className="text-xs text-gray-400 space-y-1">
+          <p>• Click to select objects</p>
+          <p>• Drag to move</p>
+          <p>• Scroll to rotate</p>
+        </div>
+      </div>
+
+      {/* Main Canvas Area */}
+      <div className="flex-1 flex items-center justify-center bg-gray-900 p-8">
+        <div className="relative">
           <div
             onMouseDown={interactionHandlers.handleMouseDown}
             onMouseMove={interactionHandlers.handleMouseMove}
             onMouseUp={interactionHandlers.handleMouseUp}
             onWheel={interactionHandlers.handleWheel}
-            className="inline-block"
+            style={{
+              transform: `scale(${canvasScale})`,
+              transformOrigin: 'center center',
+            }}
+            className="shadow-2xl"
           >
             <Canvas
               objects={objects}
@@ -191,9 +214,8 @@ function App() {
               showGrid={showGrid}
             />
           </div>
-          <div className="mt-4 text-sm text-gray-600">
-            <p>Click to select objects, drag to move, scroll to rotate</p>
-            <p>Canvas: {canvasWidth}×{canvasHeight}px (normalized to 0-1)</p>
+          <div className="absolute -bottom-8 left-0 right-0 text-center text-xs text-gray-500">
+            {canvasWidth}×{canvasHeight}px @ {Math.round(canvasScale * 100)}% scale
           </div>
         </div>
       </div>
