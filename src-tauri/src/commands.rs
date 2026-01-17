@@ -63,8 +63,8 @@ pub async fn stop_server(state: State<'_, AppState>) -> Result<(), String> {
         }
     }
 
-    // Note: WebSocket server will continue accepting connections
-    // but frames will stop being generated/broadcast
+    // Stop the WebSocket server
+    state.websocket_server.stop().await;
 
     Ok(())
 }

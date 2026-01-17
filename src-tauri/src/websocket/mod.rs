@@ -5,6 +5,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::broadcast;
+use tokio::task::JoinHandle;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::WebSocketStream;
 
@@ -15,6 +16,7 @@ pub type BroadcastReceiver = broadcast::Receiver<Vec<u8>>;
 pub struct WebSocketServer {
     broadcast_tx: BroadcastSender,
     connected_clients: Arc<Mutex<usize>>,
+    server_task: Arc<Mutex<Option<JoinHandle<()>>>>,
 }
 
 impl WebSocketServer {
@@ -27,6 +29,7 @@ impl WebSocketServer {
         Self {
             broadcast_tx,
             connected_clients: Arc::new(Mutex::new(0)),
+            server_task: Arc::new(Mutex::new(None)),
         }
     }
 
@@ -48,6 +51,9 @@ impl WebSocketServer {
         &self,
         port: u16,
     ) -> Result<()> {
+        // Stop any existing server first
+        self.stop().await;
+
         let addr: SocketAddr = format!("127.0.0.1:{}", port).parse()?;
         let listener = TcpListener::bind(&addr).await?;
 
@@ -57,7 +63,7 @@ impl WebSocketServer {
         let connected_clients = self.connected_clients.clone();
 
         // Spawn task to accept connections
-        tokio::spawn(async move {
+        let task = tokio::spawn(async move {
             loop {
                 match listener.accept().await {
                     Ok((stream, addr)) => {
@@ -89,12 +95,34 @@ impl WebSocketServer {
                     }
                     Err(e) => {
                         eprintln!("Error accepting connection: {}", e);
+                        break;
                     }
                 }
             }
         });
 
+        // Store task handle
+        {
+            let mut server_task = self.server_task.lock();
+            *server_task = Some(task);
+        }
+
         Ok(())
+    }
+
+    /// Stop the WebSocket server
+    pub async fn stop(&self) {
+        let mut server_task = self.server_task.lock();
+        if let Some(task) = server_task.take() {
+            task.abort();
+            println!("WebSocket server stopped");
+        }
+
+        // Reset connected clients count
+        {
+            let mut count = self.connected_clients.lock();
+            *count = 0;
+        }
     }
 
     /// Broadcast binary data to all connected clients
