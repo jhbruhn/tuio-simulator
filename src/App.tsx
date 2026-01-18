@@ -4,6 +4,7 @@ import { PropertyPanel } from "./components/PropertyPanel";
 import { useTuioObjects } from "./hooks/useTuioObjects";
 import { useWebSocketServer } from "./hooks/useWebSocketServer";
 import { useCanvasInteraction } from "./hooks/useCanvasInteraction";
+import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 
 function App() {
   const [canvasWidth] = useState(1920);
@@ -111,6 +112,23 @@ function App() {
       setSelection(new Set(newSessionIds));
     }
   };
+
+  const handleSelectAll = () => {
+    const allSessionIds = new Set(objects.map((obj) => obj.session_id));
+    setSelection(allSessionIds);
+  };
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts({
+    objects,
+    selectedObjects,
+    canvasDimensions: { width: canvasWidth, height: canvasHeight },
+    onDelete: handleRemoveSelected,
+    onDuplicate: handleDuplicateSelected,
+    onSelectAll: handleSelectAll,
+    onClearSelection: clearSelection,
+    onUpdateObject: updateObject,
+  });
 
   return (
     <div className="flex h-screen bg-gray-900">
@@ -243,10 +261,19 @@ function App() {
 
         {/* Instructions */}
         <div className="text-xs text-gray-400 space-y-1">
-          <p>• Click to select objects</p>
+          <p className="font-semibold text-gray-300 mb-1">Mouse:</p>
+          <p>• Click to select</p>
           <p>• Ctrl/Cmd+Click to multi-select</p>
           <p>• Drag to move</p>
           <p>• Scroll to rotate</p>
+
+          <p className="font-semibold text-gray-300 mt-2 mb-1">Keyboard:</p>
+          <p>• Del/Backspace: Delete</p>
+          <p>• Ctrl/Cmd+D: Duplicate</p>
+          <p>• Ctrl/Cmd+A: Select all</p>
+          <p>• Esc: Clear selection</p>
+          <p>• Arrow keys: Move (Shift for 10px)</p>
+          <p>• Ctrl/Cmd+←/→: Rotate</p>
         </div>
       </div>
 
