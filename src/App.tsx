@@ -209,15 +209,16 @@ function App() {
 
           {/* Controls */}
           <div className="mb-6">
-            <div className="mb-3">
-              <button
-                onClick={handleRemoveSelected}
-                disabled={selectedObjects.size === 0}
-                className="w-full px-3 py-2 bg-red-600 rounded hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-sm font-medium"
-              >
-                Delete Selected
-              </button>
-            </div>
+            {selectedObjects.size > 0 && (
+              <div className="mb-3">
+                <button
+                  onClick={handleRemoveSelected}
+                  className="w-full px-3 py-2 bg-red-600 rounded hover:bg-red-700 text-sm font-medium"
+                >
+                  Delete Selected
+                </button>
+              </div>
+            )}
 
             {/* Property Panel */}
             <PropertyPanel

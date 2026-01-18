@@ -49,9 +49,15 @@ export function useCanvasDimensions({
       }
 
       // Round to whole pixels and ensure minimum size
-      setDimensions({
-        width: Math.max(100, Math.floor(width)),
-        height: Math.max(100, Math.floor(height)),
+      const newWidth = Math.max(100, Math.floor(width));
+      const newHeight = Math.max(100, Math.floor(height));
+
+      // Only update if dimensions actually changed (prevent feedback loop)
+      setDimensions((prev) => {
+        if (prev.width === newWidth && prev.height === newHeight) {
+          return prev;
+        }
+        return { width: newWidth, height: newHeight };
       });
     };
 

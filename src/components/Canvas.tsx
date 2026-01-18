@@ -210,12 +210,21 @@ function drawObjectsBatched(
   });
 
   // Third pass: Draw text labels (batched text operations)
-  ctx.fillStyle = "#ffffff";
-  ctx.font = "12px sans-serif";
+  // Show component_id (token number) with larger, more visible font
+  ctx.font = "bold 24px sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   objects.forEach(obj => {
     const pos = normalizedToPixel({ x: obj.x, y: obj.y }, dimensions);
-    ctx.fillText(obj.session_id.toString(), pos.x, pos.y);
+    const text = obj.component_id.toString();
+
+    // Draw black outline for visibility
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = 4;
+    ctx.strokeText(text, pos.x, pos.y);
+
+    // Draw white fill on top
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText(text, pos.x, pos.y);
   });
 }
