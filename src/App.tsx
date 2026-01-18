@@ -81,6 +81,37 @@ function App() {
     }
   };
 
+  const handleDuplicateSelected = async () => {
+    if (selectedObjects.size === 0) return;
+
+    const newSessionIds: number[] = [];
+    const offset = 20 / canvasWidth; // 20 pixel offset in normalized coords
+
+    for (const sessionId of selectedObjects) {
+      const obj = objects.find((o) => o.session_id === sessionId);
+      if (!obj) continue;
+
+      try {
+        // Create duplicate with slight offset
+        const newX = Math.min(1.0, obj.x + offset);
+        const newY = Math.min(1.0, obj.y + offset);
+        const newSessionId = await addObject(obj.type_id, newX, newY);
+
+        // Update the angle to match original
+        await updateObject(newSessionId, newX, newY, obj.angle);
+
+        newSessionIds.push(newSessionId);
+      } catch (err) {
+        console.error("Failed to duplicate object:", err);
+      }
+    }
+
+    // Select the duplicated objects
+    if (newSessionIds.length > 0) {
+      setSelection(new Set(newSessionIds));
+    }
+  };
+
   return (
     <div className="flex h-screen bg-gray-900">
       {/* Sidebar Controls */}
@@ -160,13 +191,22 @@ function App() {
             >
               + Add Object
             </button>
-            <button
-              onClick={handleRemoveSelected}
-              disabled={selectedObjects.size === 0}
-              className="w-full px-3 py-2 bg-red-600 rounded hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-sm font-medium"
-            >
-              Remove ({selectedObjects.size})
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={handleDuplicateSelected}
+                disabled={selectedObjects.size === 0}
+                className="flex-1 px-3 py-2 bg-green-600 rounded hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-sm font-medium"
+              >
+                Duplicate
+              </button>
+              <button
+                onClick={handleRemoveSelected}
+                disabled={selectedObjects.size === 0}
+                className="flex-1 px-3 py-2 bg-red-600 rounded hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-sm font-medium"
+              >
+                Delete
+              </button>
+            </div>
           </div>
 
           <div className="mt-3 pt-3 border-t border-gray-700 space-y-1 text-sm">
