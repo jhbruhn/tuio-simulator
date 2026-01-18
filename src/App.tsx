@@ -336,6 +336,7 @@ function App() {
           </div>
         </div>
       </div>
+      </div>
 
       {/* Status Bar */}
       <StatusBar
