@@ -90,7 +90,7 @@ export function Canvas({
       ref={canvasRef}
       width={width}
       height={height}
-      className="border border-gray-300 bg-white"
+      className="border border-gray-300 bg-white block"
       onMouseDown={onMouseDown}
       onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}

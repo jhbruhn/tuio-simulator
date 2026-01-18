@@ -25,6 +25,8 @@ export function useCanvasDimensions({
   });
 
   useEffect(() => {
+    let timeoutId: number | null = null;
+
     const updateDimensions = () => {
       if (!containerRef.current) return;
 
@@ -33,26 +35,38 @@ export function useCanvasDimensions({
       const newWidth = Math.floor(container.clientWidth);
       const newHeight = Math.floor(container.clientHeight);
 
-      // Only update if dimensions actually changed (prevent feedback loop)
+      // Ignore invalid dimensions
+      if (newWidth === 0 || newHeight === 0) return;
+
+      // Only update if dimensions actually changed by more than 1px (prevent feedback loop)
       setDimensions((prev) => {
-        if (prev.width === newWidth && prev.height === newHeight) {
+        const widthDiff = Math.abs(prev.width - newWidth);
+        const heightDiff = Math.abs(prev.height - newHeight);
+
+        if (widthDiff <= 1 && heightDiff <= 1) {
           return prev;
         }
         return { width: newWidth, height: newHeight };
       });
     };
 
-    // Delay initial calculation to let CSS apply
-    const timeoutId = setTimeout(updateDimensions, 0);
+    // Debounced update to prevent rapid firing
+    const debouncedUpdate = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(updateDimensions, 100);
+    };
 
-    // Update on resize
-    const resizeObserver = new ResizeObserver(updateDimensions);
+    // Initial calculation
+    updateDimensions();
+
+    // Update on resize with debouncing
+    const resizeObserver = new ResizeObserver(debouncedUpdate);
     if (containerRef.current) {
       resizeObserver.observe(containerRef.current);
     }
 
     return () => {
-      clearTimeout(timeoutId);
+      if (timeoutId) clearTimeout(timeoutId);
       resizeObserver.disconnect();
     };
   }, [containerRef, aspectRatio]);

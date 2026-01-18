@@ -264,22 +264,20 @@ function App() {
             onDragOver={handleCanvasDragOver}
             onDrop={handleCanvasDrop}
           >
-            <div
-              ref={canvasContainerRef}
-              className="relative max-w-full max-h-full"
-              style={{ aspectRatio: aspectRatio }}
-            >
-              <Canvas
-                objects={objects}
-                width={canvasWidth}
-                height={canvasHeight}
-                showGrid={showGrid}
-                selectedObjects={selectedObjects}
-                onMouseDown={interactionHandlers.handleMouseDown}
-                onMouseMove={interactionHandlers.handleMouseMove}
-                onMouseUp={interactionHandlers.handleMouseUp}
-                onWheel={interactionHandlers.handleWheel}
-              />
+            <div className="relative max-w-full max-h-full" style={{ aspectRatio: aspectRatio }}>
+              <div ref={canvasContainerRef} className="absolute inset-0">
+                <Canvas
+                  objects={objects}
+                  width={canvasWidth}
+                  height={canvasHeight}
+                  showGrid={showGrid}
+                  selectedObjects={selectedObjects}
+                  onMouseDown={interactionHandlers.handleMouseDown}
+                  onMouseMove={interactionHandlers.handleMouseMove}
+                  onMouseUp={interactionHandlers.handleMouseUp}
+                  onWheel={interactionHandlers.handleWheel}
+                />
+              </div>
               <div className="absolute -bottom-8 left-0 right-0 text-center text-xs text-gray-500">
                 {canvasWidth}×{canvasHeight}px ({aspectRatio.toFixed(2)}:1)
               </div>
