@@ -2,18 +2,28 @@ import { useState, useEffect } from "react";
 import { Canvas } from "./components/Canvas";
 import { PropertyPanel } from "./components/PropertyPanel";
 import { StatusBar } from "./components/StatusBar";
+import { TokenPalette } from "./components/TokenPalette";
+import { OscDebugger } from "./components/OscDebugger";
+import { ControlPanel } from "./components/ControlPanel";
 import { useTuioObjects } from "./hooks/useTuioObjects";
 import { useWebSocketServer } from "./hooks/useWebSocketServer";
 import { useCanvasInteraction } from "./hooks/useCanvasInteraction";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useSettings } from "./hooks/useSettings";
+import { pixelToNormalized, clampNormalized } from "./utils/coordinates";
 
 function App() {
   const { settings, updateSettings } = useSettings();
   const { canvasWidth, canvasHeight, showGrid, canvasScale } = settings;
 
-  // Selected object type for adding new objects
-  const [selectedTypeId, setSelectedTypeId] = useState(1);
+  // Track which component IDs are currently active on the canvas
+  const [activeTokens, setActiveTokens] = useState<Set<number>>(new Set());
+
+  // Dragging token from palette
+  const [draggingTokenId, setDraggingTokenId] = useState<number | null>(null);
+
+  // OSC Debugger state
+  const [isDebuggerOpen, setIsDebuggerOpen] = useState(false);
 
   // Local port state for input field (separate from server status)
   const [portInput, setPortInput] = useState(settings.port);
@@ -77,11 +87,62 @@ function App() {
     }
   };
 
-  const handleAddObject = async () => {
+  // Update active tokens when objects change
+  useEffect(() => {
+    const active = new Set(objects.map((obj) => obj.component_id));
+    setActiveTokens(active);
+  }, [objects]);
+
+  const handleTokenDragStart = (componentId: number) => {
+    setDraggingTokenId(componentId);
+  };
+
+  const handleCanvasDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleCanvasDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+
+    if (!draggingTokenId) return;
+
+    // Get canvas element and its bounding rect
+    const canvasEl = e.currentTarget.querySelector('canvas');
+    if (!canvasEl) return;
+
+    const rect = canvasEl.getBoundingClientRect();
+
+    // Calculate position relative to canvas (accounting for scale)
+    const canvasX = (e.clientX - rect.left) / canvasScale;
+    const canvasY = (e.clientY - rect.top) / canvasScale;
+
+    // Convert to normalized coordinates
+    const normalized = pixelToNormalized(
+      { x: canvasX, y: canvasY },
+      { width: canvasWidth, height: canvasHeight }
+    );
+    const clamped = clampNormalized(normalized);
+
     try {
-      await addObject(selectedTypeId, 0.5, 0.5);
+      await addObject(draggingTokenId, clamped.x, clamped.y);
     } catch (err) {
       console.error("Failed to add object:", err);
+      alert(`Failed to add token: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setDraggingTokenId(null);
+    }
+  };
+
+  const handleTokenReturn = async (componentId: number) => {
+    // Find and remove the object with this component_id
+    const obj = objects.find((o) => o.component_id === componentId);
+    if (obj) {
+      try {
+        await removeObject(obj.session_id);
+      } catch (err) {
+        console.error("Failed to return token:", err);
+      }
     }
   };
 
@@ -96,34 +157,9 @@ function App() {
   };
 
   const handleDuplicateSelected = async () => {
-    if (selectedObjects.size === 0) return;
-
-    const newSessionIds: number[] = [];
-    const offset = 20 / canvasWidth; // 20 pixel offset in normalized coords
-
-    for (const sessionId of selectedObjects) {
-      const obj = objects.find((o) => o.session_id === sessionId);
-      if (!obj) continue;
-
-      try {
-        // Create duplicate with slight offset
-        const newX = Math.min(1.0, obj.x + offset);
-        const newY = Math.min(1.0, obj.y + offset);
-        const newSessionId = await addObject(obj.type_id, newX, newY);
-
-        // Update the angle to match original
-        await updateObject(newSessionId, newX, newY, obj.angle);
-
-        newSessionIds.push(newSessionId);
-      } catch (err) {
-        console.error("Failed to duplicate object:", err);
-      }
-    }
-
-    // Select the duplicated objects
-    if (newSessionIds.length > 0) {
-      setSelection(new Set(newSessionIds));
-    }
+    // Note: Duplicate is disabled because component_id must be unique
+    // This feature would require picking a new component_id from available tokens
+    alert("Duplicate is not available - each token can only be used once. Drag a new token from the palette instead.");
   };
 
   const handleSelectAll = () => {
@@ -149,116 +185,39 @@ function App() {
         {/* Sidebar Controls */}
         <div className="w-[400px] shrink-0 bg-gray-800 text-white p-4 overflow-y-auto">
           {/* Server Controls */}
+          <ControlPanel
+            isRunning={isRunning}
+            portInput={portInput}
+            fps={fps}
+            onPortChange={(newPort) => {
+              setPortInput(newPort);
+              updateSettings({ port: newPort });
+            }}
+            onFpsChange={(newFps) => {
+              setFps(newFps);
+              updateSettings({ fps: newFps });
+            }}
+            onStartServer={handleStartServer}
+            onStopServer={handleStopServer}
+            onOpenDebugger={() => setIsDebuggerOpen(true)}
+          />
+
+          {/* Token Palette */}
           <div className="mb-6">
-            <h2 className="text-lg font-semibold mb-3">Server</h2>
+            <TokenPalette
+              activeTokens={activeTokens}
+              onTokenDragStart={handleTokenDragStart}
+              onTokenReturn={handleTokenReturn}
+            />
 
-            <div className="space-y-3">
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <label className="block text-sm mb-1">Port</label>
-                  <input
-                    type="number"
-                    value={portInput}
-                    onChange={(e) => {
-                      const newPort = parseInt(e.target.value) || 3333;
-                      setPortInput(newPort);
-                      updateSettings({ port: newPort });
-                    }}
-                    disabled={isRunning}
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white disabled:opacity-50"
-                  />
-                </div>
-                <div className="flex-1">
-                  <label className="block text-sm mb-1">FPS</label>
-                  <input
-                    type="number"
-                    value={fps}
-                    onChange={(e) => {
-                      const newFps = parseInt(e.target.value);
-                      setFps(newFps);
-                      updateSettings({ fps: newFps });
-                    }}
-                    min="1"
-                    max="120"
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-2 mt-3">
+            <div className="mt-3">
               <button
-                onClick={handleStartServer}
-                disabled={isRunning}
-                className="flex-1 px-3 py-2 bg-green-600 rounded hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-sm font-medium"
+                onClick={handleRemoveSelected}
+                disabled={selectedObjects.size === 0}
+                className="w-full px-3 py-2 bg-red-600 rounded hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-sm font-medium"
               >
-                Start
+                Delete Selected
               </button>
-              <button
-                onClick={handleStopServer}
-                disabled={!isRunning}
-                className="flex-1 px-3 py-2 bg-red-600 rounded hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-sm font-medium"
-              >
-                Stop
-              </button>
-            </div>
-          </div>
-
-          {/* Object Controls */}
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold mb-3">Objects</h2>
-
-            {/* Object Type Palette */}
-            <div className="mb-3">
-              <label className="block text-sm mb-2">Object Type</label>
-              <div className="grid grid-cols-5 gap-2">
-                {[1, 2, 3, 4, 5].map((typeId) => {
-                  const hue = (typeId * 137) % 360;
-                  const isSelected = selectedTypeId === typeId;
-                  return (
-                    <button
-                      key={typeId}
-                      onClick={() => setSelectedTypeId(typeId)}
-                      className={`aspect-square rounded flex items-center justify-center text-xs font-medium transition-all ${
-                        isSelected
-                          ? "ring-2 ring-white ring-offset-2 ring-offset-gray-800"
-                          : "hover:ring-1 hover:ring-gray-500"
-                      }`}
-                      style={{
-                        backgroundColor: `hsl(${hue}, 70%, 50%)`,
-                      }}
-                      title={`Type ${typeId}`}
-                    >
-                      {typeId}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <button
-                onClick={handleAddObject}
-                className="w-full px-3 py-2 bg-blue-600 rounded hover:bg-blue-700 text-sm font-medium"
-              >
-                + Add Object (Type {selectedTypeId})
-              </button>
-              <div className="flex gap-2">
-                <button
-                  onClick={handleDuplicateSelected}
-                  disabled={selectedObjects.size === 0}
-                  className="flex-1 px-3 py-2 bg-green-600 rounded hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-sm font-medium"
-                >
-                  Duplicate
-                </button>
-                <button
-                  onClick={handleRemoveSelected}
-                  disabled={selectedObjects.size === 0}
-                  className="flex-1 px-3 py-2 bg-red-600 rounded hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-sm font-medium"
-                >
-                  Delete
-                </button>
-              </div>
             </div>
 
             {/* Property Panel */}
@@ -290,7 +249,6 @@ function App() {
 
             <p className="font-semibold text-gray-300 mt-2 mb-1">Keyboard:</p>
             <p>• Del/Backspace: Delete</p>
-            <p>• Ctrl/Cmd+D: Duplicate</p>
             <p>• Ctrl/Cmd+A: Select all</p>
             <p>• Esc: Clear selection</p>
             <p>• Arrow keys: Move (Shift for 10px)</p>
@@ -299,7 +257,11 @@ function App() {
         </div>
 
         {/* Main Canvas Area */}
-        <div className="flex-1 flex items-center justify-center bg-gray-900 p-4 overflow-auto">
+        <div
+          className="flex-1 flex items-center justify-center bg-gray-900 p-4 overflow-auto"
+          onDragOver={handleCanvasDragOver}
+          onDrop={handleCanvasDrop}
+        >
           <div className="relative">
             <div
               style={{
@@ -337,6 +299,9 @@ function App() {
         totalObjects={objects.length}
         selectedObjects={selectedObjects.size}
       />
+
+      {/* OSC Debugger Modal */}
+      <OscDebugger isOpen={isDebuggerOpen} onClose={() => setIsDebuggerOpen(false)} />
     </div>
   );
 }

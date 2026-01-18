@@ -1,10 +1,15 @@
+use crate::events;
 use crate::state::{AppState, ServerStatus, TuioObject};
 use crate::tuio::frame::generate_frame;
 use std::time::Duration;
-use tauri::State;
+use tauri::{AppHandle, State};
 
 #[tauri::command]
-pub async fn start_server(state: State<'_, AppState>, port: u16) -> Result<(), String> {
+pub async fn start_server(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    port: u16,
+) -> Result<(), String> {
     // Check if already running
     {
         let running = state.server_running.lock();
@@ -28,8 +33,9 @@ pub async fn start_server(state: State<'_, AppState>, port: u16) -> Result<(), S
 
     // Start frame generation task
     let state_clone = state.inner().clone();
+    let app_clone = app.clone();
     let task = tokio::spawn(async move {
-        frame_generation_loop(state_clone).await;
+        frame_generation_loop(state_clone, app_clone).await;
     });
 
     // Store task handle
@@ -72,13 +78,26 @@ pub async fn stop_server(state: State<'_, AppState>) -> Result<(), String> {
 #[tauri::command]
 pub async fn add_object(
     state: State<'_, AppState>,
-    type_id: u16,
+    component_id: u16,
     x: f32,
     y: f32,
 ) -> Result<u32, String> {
+    // Validate component_id range (1-24)
+    if !(1..=24).contains(&component_id) {
+        return Err("Component ID must be in range [1, 24]".to_string());
+    }
+
     // Validate coordinates
     if !(0.0..=1.0).contains(&x) || !(0.0..=1.0).contains(&y) {
         return Err("Coordinates must be in range [0.0, 1.0]".to_string());
+    }
+
+    // Check if component_id is already in use
+    {
+        let objects = state.objects.lock();
+        if objects.values().any(|obj| obj.component_id == component_id) {
+            return Err(format!("Component ID {} is already in use", component_id));
+        }
     }
 
     let session_id = state.allocate_session_id();
@@ -86,9 +105,9 @@ pub async fn add_object(
 
     let object = TuioObject {
         session_id,
-        type_id,
+        type_id: component_id, // Use component_id as type_id for color mapping
         user_id: 0,
-        component_id: type_id,
+        component_id,
         x,
         y,
         angle: 0.0,
@@ -178,20 +197,65 @@ pub async fn get_server_status(state: State<'_, AppState>) -> Result<ServerStatu
 }
 
 /// Frame generation loop that runs continuously while the server is running
-async fn frame_generation_loop(state: AppState) {
+async fn frame_generation_loop(state: AppState, app: AppHandle) {
+    // Get initial FPS for interval calculation
+    let mut fps = {
+        let config = state.config.lock();
+        config.fps
+    };
+    let mut interval = tokio::time::interval(Duration::from_millis((1000 / fps.max(1)) as u64));
+    interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+
     loop {
+        interval.tick().await;
+
         // Check if server is still running
-        {
-            let running = state.server_running.lock();
-            if !*running {
-                break;
-            }
+        let running = *state.server_running.lock();
+        if !running {
+            break;
+        }
+
+        // Skip frame generation if no clients are connected (optimization)
+        let connected_clients = state.get_connected_clients();
+        if connected_clients == 0 {
+            continue;
+        }
+
+        // Check if FPS changed and update interval if needed
+        let current_fps = {
+            let config = state.config.lock();
+            config.fps
+        };
+        if current_fps != fps {
+            fps = current_fps;
+            interval = tokio::time::interval(Duration::from_millis((1000 / fps.max(1)) as u64));
+            interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
         }
 
         // Generate frame
         match generate_frame(&state) {
             Ok(frame_data) => {
-                // Broadcast to all connected clients
+                // Batch lock acquisitions for debug info
+                let (frame_id, object_count) = {
+                    let frame_id = *state.frame_counter.lock();
+                    let object_count = state.objects.lock().len();
+                    (frame_id, object_count)
+                };
+
+                let message_size = frame_data.len();
+                let timestamp = chrono::Utc::now().timestamp_millis();
+
+                // Emit OSC message debug event
+                events::emit_osc_message(
+                    &app,
+                    frame_id,
+                    timestamp,
+                    object_count,
+                    message_size,
+                    connected_clients,
+                );
+
+                // Broadcast to all connected clients (non-blocking)
                 if let Err(e) = state.websocket_server.broadcast(frame_data).await {
                     eprintln!("Error broadcasting frame: {}", e);
                 }
@@ -200,15 +264,6 @@ async fn frame_generation_loop(state: AppState) {
                 eprintln!("Error generating frame: {}", e);
             }
         }
-
-        // Sleep based on configured FPS
-        let fps = {
-            let config = state.config.lock();
-            config.fps
-        };
-
-        let interval_ms = 1000 / fps.max(1);
-        tokio::time::sleep(Duration::from_millis(interval_ms as u64)).await;
     }
 }
 

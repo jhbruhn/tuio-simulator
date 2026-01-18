@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TUIO Client Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+        }
+
+        .controls {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .controls label {
+            margin-right: 10px;
+        }
+
+        .controls input {
+            padding: 5px 10px;
+            border-radius: 4px;
+            border: 1px solid #444;
+            background: #333;
+            color: #fff;
+            margin-right: 15px;
+        }
+
+        .controls button {
+            padding: 8px 16px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            margin-right: 10px;
+        }
+
+        .controls button.connect {
+            background: #22c55e;
+            color: white;
+        }
+
+        .controls button.disconnect {
+            background: #ef4444;
+            color: white;
+        }
+
+        .controls button:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+
+        .status {
+            padding: 10px 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .status.disconnected {
+            background: #7f1d1d;
+        }
+
+        .status.connected {
+            background: #14532d;
+        }
+
+        .canvas-container {
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        canvas {
+            border: 2px solid #444;
+            background: #000;
+            display: block;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .stat-card h3 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            color: #888;
+            text-transform: uppercase;
+        }
+
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #22c55e;
+        }
+
+        .token-list {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .token-list h2 {
+            margin-top: 0;
+        }
+
+        .token-item {
+            background: #333;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .token-item .id {
+            color: #60a5fa;
+            font-weight: bold;
+        }
+
+        .token-item .pos {
+            color: #34d399;
+        }
+
+        .token-item .angle {
+            color: #fbbf24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>TUIO 2.0 Client Test</h1>
+
+        <div class="controls">
+            <label>
+                Host:
+                <input type="text" id="host" value="localhost">
+            </label>
+            <label>
+                Port:
+                <input type="number" id="port" value="3343">
+            </label>
+            <button class="connect" id="connectBtn" onclick="connect()">Connect</button>
+            <button class="disconnect" id="disconnectBtn" onclick="disconnect()" disabled>Disconnect</button>
+        </div>
+
+        <div id="status" class="status disconnected">
+            Disconnected
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <h3>Active Tokens</h3>
+                <div class="value" id="tokenCount">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Frame ID</h3>
+                <div class="value" id="frameId">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>Messages/sec</h3>
+                <div class="value" id="messageRate">0</div>
+            </div>
+        </div>
+
+        <div class="canvas-container">
+            <h2>Token Visualization</h2>
+            <canvas id="canvas" width="960" height="540"></canvas>
+        </div>
+
+        <div class="token-list">
+            <h2>Active Tokens</h2>
+            <div id="tokenList"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Simple WebSocket-based TUIO 2.0 client
+        let ws = null;
+        let tokens = new Map();
+        let frameCount = 0;
+        let lastFrameTime = Date.now();
+        let messageRate = 0;
+
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        window.connect = function() {
+            const host = document.getElementById('host').value;
+            const port = document.getElementById('port').value;
+
+            ws = new WebSocket(`ws://${host}:${port}`);
+            ws.binaryType = 'arraybuffer';
+
+            ws.onopen = () => {
+                updateStatus('connected');
+                console.log('Connected to TUIO server');
+            };
+
+            ws.onmessage = (event) => {
+                handleOSCMessage(event.data);
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                updateStatus('error');
+            };
+
+            ws.onclose = () => {
+                updateStatus('disconnected');
+                console.log('Disconnected from TUIO server');
+            };
+        };
+
+        window.disconnect = function() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        };
+
+        function updateStatus(status) {
+            const statusEl = document.getElementById('status');
+            const connectBtn = document.getElementById('connectBtn');
+            const disconnectBtn = document.getElementById('disconnectBtn');
+
+            if (status === 'connected') {
+                statusEl.textContent = 'Connected';
+                statusEl.className = 'status connected';
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+            } else {
+                statusEl.textContent = 'Disconnected';
+                statusEl.className = 'status disconnected';
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+                tokens.clear();
+                render();
+            }
+        }
+
+        function handleOSCMessage(data) {
+            // Parse OSC bundle
+            const bundle = parseOSCBundle(new DataView(data));
+
+            if (bundle && bundle.messages) {
+                bundle.messages.forEach(msg => {
+                    if (msg.address === '/tuio2/frm') {
+                        // Frame message
+                        const frameId = msg.args[2]; // f_id
+                        frameCount++;
+                        document.getElementById('frameId').textContent = frameId;
+
+                        // Calculate message rate
+                        const now = Date.now();
+                        if (now - lastFrameTime >= 1000) {
+                            messageRate = frameCount;
+                            document.getElementById('messageRate').textContent = messageRate;
+                            frameCount = 0;
+                            lastFrameTime = now;
+                        }
+                    } else if (msg.address === '/tuio2/tok') {
+                        // Token message
+                        const sessionId = msg.args[0];
+                        const typeId = msg.args[1];
+                        const userId = msg.args[2];
+                        const componentId = msg.args[3];
+                        const x = msg.args[4];
+                        const y = msg.args[5];
+                        const angle = msg.args[6];
+
+                        tokens.set(sessionId, {
+                            sessionId,
+                            typeId,
+                            userId,
+                            componentId,
+                            x,
+                            y,
+                            angle
+                        });
+                    } else if (msg.address === '/tuio2/alv') {
+                        // Alive message - remove tokens not in the list
+                        const aliveIds = new Set(msg.args);
+                        for (const [id] of tokens) {
+                            if (!aliveIds.has(id)) {
+                                tokens.delete(id);
+                            }
+                        }
+                    }
+                });
+
+                render();
+            }
+        }
+
+        function parseOSCBundle(view) {
+            let offset = 0;
+
+            // Check bundle header "#bundle"
+            const header = getString(view, offset);
+            if (header !== '#bundle') return null;
+            offset += align(header.length + 1);
+
+            // Skip time tag (8 bytes)
+            offset += 8;
+
+            const messages = [];
+
+            while (offset < view.byteLength) {
+                // Read element size
+                const size = view.getInt32(offset);
+                offset += 4;
+
+                // Parse message
+                const msgView = new DataView(view.buffer, view.byteOffset + offset, size);
+                const msg = parseOSCMessage(msgView);
+                if (msg) messages.push(msg);
+
+                offset += size;
+            }
+
+            return { messages };
+        }
+
+        function parseOSCMessage(view) {
+            let offset = 0;
+
+            // Read address
+            const address = getString(view, offset);
+            offset += align(address.length + 1);
+
+            // Read type tags
+            const typeTags = getString(view, offset);
+            offset += align(typeTags.length + 1);
+
+            // Read arguments
+            const args = [];
+            for (let i = 1; i < typeTags.length; i++) {
+                const tag = typeTags[i];
+                if (tag === 'i') {
+                    args.push(view.getInt32(offset));
+                    offset += 4;
+                } else if (tag === 'f') {
+                    args.push(view.getFloat32(offset));
+                    offset += 4;
+                } else if (tag === 's') {
+                    const str = getString(view, offset);
+                    args.push(str);
+                    offset += align(str.length + 1);
+                }
+            }
+
+            return { address, args };
+        }
+
+        function getString(view, offset) {
+            let str = '';
+            for (let i = offset; i < view.byteLength; i++) {
+                const byte = view.getUint8(i);
+                if (byte === 0) break;
+                str += String.fromCharCode(byte);
+            }
+            return str;
+        }
+
+        function align(n) {
+            return Math.ceil(n / 4) * 4;
+        }
+
+        function render() {
+            // Clear canvas
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw tokens
+            tokens.forEach((token, id) => {
+                const x = token.x * canvas.width;
+                const y = token.y * canvas.height;
+                const radius = 20;
+
+                // Generate color from component ID
+                const hue = ((token.componentId - 1) * 137) % 360;
+                const color = `hsl(${hue}, 70%, 50%)`;
+
+                // Draw token circle
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Draw rotation indicator
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(
+                    x + Math.cos(token.angle) * radius,
+                    y + Math.sin(token.angle) * radius
+                );
+                ctx.stroke();
+
+                // Draw session ID
+                ctx.fillStyle = '#fff';
+                ctx.font = '12px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(token.componentId, x, y + radius + 15);
+            });
+
+            // Update stats and token list
+            document.getElementById('tokenCount').textContent = tokens.size;
+
+            const tokenListEl = document.getElementById('tokenList');
+            if (tokens.size === 0) {
+                tokenListEl.innerHTML = '<div style="color: #888;">No tokens detected</div>';
+            } else {
+                tokenListEl.innerHTML = Array.from(tokens.values())
+                    .map(token => `
+                        <div class="token-item">
+                            <span class="id">Component ${token.componentId}</span>
+                            (Session ${token.sessionId}) -
+                            <span class="pos">x: ${token.x.toFixed(3)}, y: ${token.y.toFixed(3)}</span> -
+                            <span class="angle">angle: ${(token.angle * 180 / Math.PI).toFixed(1)}°</span>
+                        </div>
+                    `)
+                    .join('');
+            }
+        }
+
+        // Initial render
+        render();
+    </script>
+</body>
+</html>

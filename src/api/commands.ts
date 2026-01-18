@@ -10,12 +10,12 @@ export async function stopServer(): Promise<void> {
 }
 
 export async function addObject(
-  typeId: number,
+  componentId: number,
   x: number,
   y: number
 ): Promise<number> {
   return await invoke<number>("add_object", {
-    typeId,
+    componentId,
     x,
     y,
   });

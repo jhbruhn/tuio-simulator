@@ -5,7 +5,7 @@ import * as commands from "../api/commands";
 export interface UseTuioObjects {
   objects: TuioObject[];
   selectedObjects: Set<number>;
-  addObject: (typeId: number, x: number, y: number) => Promise<number>;
+  addObject: (componentId: number, x: number, y: number) => Promise<number>;
   updateObject: (sessionId: number, x: number, y: number, angle: number) => Promise<void>;
   removeObject: (sessionId: number) => Promise<void>;
   setSelection: (sessionIds: Set<number>) => void;
@@ -22,15 +22,15 @@ export function useTuioObjects(): UseTuioObjects {
   const [objects, setObjects] = useState<TuioObject[]>([]);
   const [selectedObjects, setSelectedObjects] = useState<Set<number>>(new Set());
 
-  const addObject = useCallback(async (typeId: number, x: number, y: number): Promise<number> => {
-    const sessionId = await commands.addObject(typeId, x, y);
+  const addObject = useCallback(async (componentId: number, x: number, y: number): Promise<number> => {
+    const sessionId = await commands.addObject(componentId, x, y);
 
     // Add to local state
     const newObject: TuioObject = {
       session_id: sessionId,
-      type_id: typeId,
+      type_id: componentId, // Use componentId as type_id for color mapping
       user_id: 0,
-      component_id: 0,
+      component_id: componentId,
       x,
       y,
       angle: 0,

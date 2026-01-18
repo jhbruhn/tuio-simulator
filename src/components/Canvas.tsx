@@ -29,28 +29,60 @@ export function Canvas({
   onWheel,
 }: CanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const gridCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+
+  // Cache grid rendering in an offscreen canvas for better performance
+  useEffect(() => {
+    if (!showGrid) {
+      gridCanvasRef.current = null;
+      return;
+    }
+
+    const gridCanvas = document.createElement('canvas');
+    gridCanvas.width = width;
+    gridCanvas.height = height;
+    const gridCtx = gridCanvas.getContext('2d');
+    if (gridCtx) {
+      drawGrid(gridCtx, width, height);
+      gridCanvasRef.current = gridCanvas;
+    }
+  }, [width, height, showGrid]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d", { alpha: false });
     if (!ctx) return;
 
-    // Clear canvas
-    ctx.clearRect(0, 0, width, height);
-
-    // Draw grid if enabled
-    if (showGrid) {
-      drawGrid(ctx, width, height);
-    }
-
-    // Draw all objects
     const dimensions: CanvasDimensions = { width, height };
-    objects.forEach((obj) => {
-      const isSelected = selectedObjects.has(obj.session_id);
-      drawObject(ctx, obj, dimensions, isSelected);
-    });
+
+    const render = () => {
+      // Clear canvas with fillRect (faster than clearRect)
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, height);
+
+      // Draw cached grid if enabled (drawImage is much faster than redrawing)
+      if (showGrid && gridCanvasRef.current) {
+        ctx.drawImage(gridCanvasRef.current, 0, 0);
+      }
+
+      // Draw all objects with batched operations
+      drawObjectsBatched(ctx, objects, dimensions, selectedObjects);
+    };
+
+    // Use requestAnimationFrame for smooth rendering at 60fps
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+    animationFrameRef.current = requestAnimationFrame(render);
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
   }, [objects, width, height, showGrid, selectedObjects]);
 
   return (
@@ -128,56 +160,62 @@ function drawGrid(ctx: CanvasRenderingContext2D, width: number, height: number) 
 }
 
 /**
- * Draw a TUIO object on the canvas
+ * Draw all objects with batched operations for better performance
+ * Reduces context state changes by grouping similar operations
  */
-function drawObject(
+function drawObjectsBatched(
   ctx: CanvasRenderingContext2D,
-  obj: TuioObject,
+  objects: TuioObject[],
   dimensions: CanvasDimensions,
-  isSelected: boolean = false
+  selectedObjects: Set<number>
 ) {
-  // Convert normalized coordinates to pixels
-  const pos = normalizedToPixel({ x: obj.x, y: obj.y }, dimensions);
+  const radius = 40;
 
-  const radius = 40; // Object radius in pixels
+  // First pass: Draw selection rings (batched)
+  ctx.strokeStyle = "#ffaa00";
+  ctx.lineWidth = 3;
+  selectedObjects.forEach(sessionId => {
+    const obj = objects.find(o => o.session_id === sessionId);
+    if (!obj) return;
 
-  ctx.save();
-
-  // Translate to object position
-  ctx.translate(pos.x, pos.y);
-
-  // Rotate by object angle
-  ctx.rotate(obj.angle);
-
-  // Draw selection ring if selected
-  if (isSelected) {
-    ctx.strokeStyle = "#ffaa00";
-    ctx.lineWidth = 3;
+    const pos = normalizedToPixel({ x: obj.x, y: obj.y }, dimensions);
     ctx.beginPath();
-    ctx.arc(0, 0, radius + 4, 0, Math.PI * 2);
+    ctx.arc(pos.x, pos.y, radius + 4, 0, Math.PI * 2);
     ctx.stroke();
-  }
+  });
 
-  // Draw circle
-  ctx.fillStyle = `hsl(${(obj.type_id * 137) % 360}, 70%, 50%)`;
-  ctx.beginPath();
-  ctx.arc(0, 0, radius, 0, Math.PI * 2);
-  ctx.fill();
+  // Second pass: Draw object circles (batched by color when possible)
+  objects.forEach(obj => {
+    const pos = normalizedToPixel({ x: obj.x, y: obj.y }, dimensions);
 
-  // Draw direction indicator (line from center to edge)
-  ctx.strokeStyle = "#ffffff";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(0, 0);
-  ctx.lineTo(radius, 0);
-  ctx.stroke();
+    ctx.save();
+    ctx.translate(pos.x, pos.y);
+    ctx.rotate(obj.angle);
 
-  // Draw session ID
+    // Draw circle
+    ctx.fillStyle = `hsl(${(obj.type_id * 137) % 360}, 70%, 50%)`;
+    ctx.beginPath();
+    ctx.arc(0, 0, radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Draw direction indicator
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(radius, 0);
+    ctx.stroke();
+
+    ctx.restore();
+  });
+
+  // Third pass: Draw text labels (batched text operations)
   ctx.fillStyle = "#ffffff";
   ctx.font = "12px sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(obj.session_id.toString(), 0, 0);
-
-  ctx.restore();
+  objects.forEach(obj => {
+    const pos = normalizedToPixel({ x: obj.x, y: obj.y }, dimensions);
+    ctx.fillText(obj.session_id.toString(), pos.x, pos.y);
+  });
 }
