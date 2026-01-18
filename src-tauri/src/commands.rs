@@ -72,13 +72,26 @@ pub async fn stop_server(state: State<'_, AppState>) -> Result<(), String> {
 #[tauri::command]
 pub async fn add_object(
     state: State<'_, AppState>,
-    type_id: u16,
+    component_id: u16,
     x: f32,
     y: f32,
 ) -> Result<u32, String> {
+    // Validate component_id range (1-24)
+    if !(1..=24).contains(&component_id) {
+        return Err("Component ID must be in range [1, 24]".to_string());
+    }
+
     // Validate coordinates
     if !(0.0..=1.0).contains(&x) || !(0.0..=1.0).contains(&y) {
         return Err("Coordinates must be in range [0.0, 1.0]".to_string());
+    }
+
+    // Check if component_id is already in use
+    {
+        let objects = state.objects.lock();
+        if objects.values().any(|obj| obj.component_id == component_id) {
+            return Err(format!("Component ID {} is already in use", component_id));
+        }
     }
 
     let session_id = state.allocate_session_id();
@@ -86,9 +99,9 @@ pub async fn add_object(
 
     let object = TuioObject {
         session_id,
-        type_id,
+        type_id: component_id, // Use component_id as type_id for color mapping
         user_id: 0,
-        component_id: type_id,
+        component_id,
         x,
         y,
         angle: 0.0,
