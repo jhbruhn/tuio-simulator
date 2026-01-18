@@ -2,6 +2,11 @@ import { useState, useCallback, useEffect } from "react";
 import * as commands from "../api/commands";
 import type { ServerStatus } from "../types/tuio";
 
+export interface UseWebSocketServerProps {
+  initialPort?: number;
+  initialFps?: number;
+}
+
 export interface UseWebSocketServer {
   isRunning: boolean;
   port: number;
@@ -20,11 +25,14 @@ export interface UseWebSocketServer {
  *
  * Provides methods for starting/stopping the server and managing FPS
  */
-export function useWebSocketServer(): UseWebSocketServer {
+export function useWebSocketServer({
+  initialPort = 3333,
+  initialFps = 60
+}: UseWebSocketServerProps = {}): UseWebSocketServer {
   const [status, setStatus] = useState<ServerStatus>({
     running: false,
-    port: 3343,
-    fps: 60,
+    port: initialPort,
+    fps: initialFps,
     connected_clients: 0,
     frame_count: 0,
     object_count: 0,

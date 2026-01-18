@@ -6,13 +6,12 @@ import { useTuioObjects } from "./hooks/useTuioObjects";
 import { useWebSocketServer } from "./hooks/useWebSocketServer";
 import { useCanvasInteraction } from "./hooks/useCanvasInteraction";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
+import { useSettings } from "./hooks/useSettings";
 
 function App() {
-  const [canvasWidth] = useState(1920);
-  const [canvasHeight] = useState(1080);
-  const [showGrid, setShowGrid] = useState(true);
-  // Scale down canvas to fit viewport (60% of actual size)
-  const [canvasScale] = useState(0.6);
+  const { settings, updateSettings } = useSettings();
+  const { canvasWidth, canvasHeight, showGrid, canvasScale } = settings;
+
   // Selected object type for adding new objects
   const [selectedTypeId, setSelectedTypeId] = useState(1);
 
@@ -36,7 +35,10 @@ function App() {
     startServer,
     stopServer,
     setFps,
-  } = useWebSocketServer();
+  } = useWebSocketServer({
+    initialPort: settings.port,
+    initialFps: settings.fps,
+  });
 
   const [interactionState, interactionHandlers] = useCanvasInteraction({
     objects,
@@ -159,7 +161,11 @@ function App() {
               <input
                 type="number"
                 value={fps}
-                onChange={(e) => setFps(parseInt(e.target.value))}
+                onChange={(e) => {
+                  const newFps = parseInt(e.target.value);
+                  setFps(newFps);
+                  updateSettings({ fps: newFps });
+                }}
                 min="1"
                 max="120"
                 className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
@@ -284,7 +290,7 @@ function App() {
             <input
               type="checkbox"
               checked={showGrid}
-              onChange={(e) => setShowGrid(e.target.checked)}
+              onChange={(e) => updateSettings({ showGrid: e.target.checked })}
               className="w-4 h-4"
             />
             <span className="text-sm">Show Grid</span>
