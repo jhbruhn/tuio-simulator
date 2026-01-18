@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Canvas } from "./components/Canvas";
 import { PropertyPanel } from "./components/PropertyPanel";
 import { StatusBar } from "./components/StatusBar";
@@ -14,6 +14,14 @@ function App() {
 
   // Selected object type for adding new objects
   const [selectedTypeId, setSelectedTypeId] = useState(1);
+
+  // Local port state for input field (separate from server status)
+  const [portInput, setPortInput] = useState(settings.port);
+
+  // Sync port input with settings on mount (from localStorage)
+  useEffect(() => {
+    setPortInput(settings.port);
+  }, [settings.port]);
 
   const {
     objects,
@@ -55,7 +63,7 @@ function App() {
 
   const handleStartServer = async () => {
     try {
-      await startServer(port);
+      await startServer(portInput);
     } catch (err) {
       console.error("Failed to start server:", err);
     }
@@ -151,7 +159,12 @@ function App() {
               <label className="block text-sm mb-1">Port</label>
               <input
                 type="number"
-                value={port}
+                value={portInput}
+                onChange={(e) => {
+                  const newPort = parseInt(e.target.value) || 3333;
+                  setPortInput(newPort);
+                  updateSettings({ port: newPort });
+                }}
                 disabled={isRunning}
                 className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white disabled:opacity-50"
               />
