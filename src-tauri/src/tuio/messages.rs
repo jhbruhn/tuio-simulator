@@ -85,20 +85,6 @@ impl AliveMessage {
 
 /// TOK (Token) message - Represents a tagged tangible object (fiducial marker)
 /// OSC Address: /tuio2/tok
-///
-/// Parameters:
-/// 1. session_id (int32) - Unique ID for this object instance
-/// 2. type_user_id (int32) - Combined type and user ID
-///    Type ID: bits 16-31, User ID: bits 0-15
-///    Encoding: (type_id << 16) | user_id
-/// 3. component_id (int32) - Component identifier (0 for simple objects)
-/// 4. x_pos (float) - Normalized X position (0.0 - 1.0)
-/// 5. y_pos (float) - Normalized Y position (0.0 - 1.0)
-/// 6. angle (float) - Rotation angle in radians (0.0 - 2π)
-/// 7. x_vel (float) - X velocity (units/second)
-/// 8. y_vel (float) - Y velocity (units/second)
-/// 9. angle_vel (float) - Rotation velocity (radians/second)
-/// 10. accel (float) - Motion acceleration (optional)
 pub struct TokenMessage {
     pub session_id: u32,
     pub type_id: u16,
@@ -162,6 +148,82 @@ impl TokenMessage {
     }
 }
 
+/// PTR (Pointer) message - Represents a pointing gesture (touch, stylus, cursor)
+/// OSC Address: /tuio2/ptr
+pub struct PointerMessage {
+    pub session_id: u32,
+    pub type_id: u16,
+    pub user_id: u16,
+    pub component_id: u16,
+    pub x: f32,
+    pub y: f32,
+    pub angle: f32,
+    pub shear: f32,
+    pub radius: f32,
+    pub pressure: f32,
+    pub x_vel: f32,
+    pub y_vel: f32,
+    pub pressure_vel: f32,
+    pub accel: f32,
+}
+
+impl PointerMessage {
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        session_id: u32,
+        type_id: u16,
+        user_id: u16,
+        component_id: u16,
+        x: f32,
+        y: f32,
+        angle: f32,
+        x_vel: f32,
+        y_vel: f32,
+    ) -> Self {
+        Self {
+            session_id,
+            type_id,
+            user_id,
+            component_id,
+            x,
+            y,
+            angle,
+            shear: 0.0,
+            radius: 0.0,
+            pressure: 1.0, // Positive pressure = touching
+            x_vel,
+            y_vel,
+            pressure_vel: 0.0,
+            accel: 0.0,
+        }
+    }
+
+    /// Convert to OSC message
+    pub fn to_osc(&self) -> OscMessage {
+        // Encode type_user_id: (type_id << 16) | user_id
+        let type_user_id = ((self.type_id as i32) << 16) | (self.user_id as i32);
+
+        OscMessage {
+            addr: "/tuio2/ptr".to_string(),
+            args: vec![
+                OscType::Int(self.session_id as i32),
+                OscType::Int(type_user_id),
+                OscType::Int(self.component_id as i32),
+                OscType::Float(self.x),
+                OscType::Float(self.y),
+                OscType::Float(self.angle),
+                OscType::Float(self.shear),
+                OscType::Float(self.radius),
+                OscType::Float(self.pressure),
+                OscType::Float(self.x_vel),
+                OscType::Float(self.y_vel),
+                OscType::Float(self.pressure_vel),
+                OscType::Float(self.accel),
+            ],
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -213,6 +275,29 @@ mod tests {
             assert_eq!(type_user_id, 65536);
         } else {
             panic!("Expected Int for type_user_id");
+        }
+    }
+
+    #[test]
+    fn test_pointer_message() {
+        let ptr = PointerMessage::new(42, 1, 0, 0, 0.5, 0.5, 0.0, 0.0, 0.0);
+        let osc = ptr.to_osc();
+
+        assert_eq!(osc.addr, "/tuio2/ptr");
+        assert_eq!(osc.args.len(), 13);
+
+        // Verify type_user_id encoding
+        if let OscType::Int(type_user_id) = osc.args[1] {
+            assert_eq!(type_user_id, 65536);
+        } else {
+            panic!("Expected Int for type_user_id");
+        }
+
+        // Verify pressure is 1.0 (touching)
+        if let OscType::Float(pressure) = osc.args[8] {
+            assert_eq!(pressure, 1.0);
+        } else {
+            panic!("Expected Float for pressure");
         }
     }
 }

@@ -1,13 +1,20 @@
-use super::messages::{AliveMessage, FrameMessage, TokenMessage};
+use super::messages::{AliveMessage, FrameMessage, PointerMessage, TokenMessage};
 use crate::state::TuioObject;
 use anyhow::Result;
 use rosc::{encoder, OscBundle, OscPacket, OscTime};
+
+/// Message type for TUIO objects
+#[derive(Debug, Clone, Copy)]
+pub enum MessageType {
+    Token,  // TOK - Tagged tangible objects (fiducials)
+    Pointer, // PTR - Pointing gestures (touch, stylus)
+}
 
 /// Creates a complete TUIO 2.0 OSC bundle
 ///
 /// A TUIO 2.0 bundle contains:
 /// 1. FRM (Frame) message - opens the bundle
-/// 2. TOK (Token) messages - one per object (0 or more)
+/// 2. Object messages (TOK or PTR) - one per object (0 or more)
 /// 3. ALV (Alive) message - closes the bundle
 pub fn create_tuio_bundle(
     frame_id: u32,
@@ -17,27 +24,59 @@ pub fn create_tuio_bundle(
     source: &str,
     objects: &[TuioObject],
 ) -> OscBundle {
+    create_tuio_bundle_with_type(frame_id, timestamp, width, height, source, objects, MessageType::Token)
+}
+
+/// Creates a TUIO bundle with specified message type
+pub fn create_tuio_bundle_with_type(
+    frame_id: u32,
+    timestamp: i64,
+    width: u16,
+    height: u16,
+    source: &str,
+    objects: &[TuioObject],
+    message_type: MessageType,
+) -> OscBundle {
     let mut content = Vec::new();
 
     // 1. Add FRM message
     let frm = FrameMessage::new(frame_id, timestamp, width, height, source.to_string());
     content.push(OscPacket::Message(frm.to_osc()));
 
-    // 2. Add TOK messages for each object
+    // 2. Add object messages (TOK or PTR) for each object
     for obj in objects {
-        let tok = TokenMessage::new(
-            obj.session_id,
-            obj.type_id,
-            obj.user_id,
-            obj.component_id,
-            obj.x,
-            obj.y,
-            obj.angle,
-            obj.x_vel,
-            obj.y_vel,
-            obj.angle_vel,
-        );
-        content.push(OscPacket::Message(tok.to_osc()));
+        let msg = match message_type {
+            MessageType::Token => {
+                let tok = TokenMessage::new(
+                    obj.session_id,
+                    obj.type_id,
+                    obj.user_id,
+                    obj.component_id,
+                    obj.x,
+                    obj.y,
+                    obj.angle,
+                    obj.x_vel,
+                    obj.y_vel,
+                    obj.angle_vel,
+                );
+                tok.to_osc()
+            }
+            MessageType::Pointer => {
+                let ptr = PointerMessage::new(
+                    obj.session_id,
+                    obj.type_id,
+                    obj.user_id,
+                    obj.component_id,
+                    obj.x,
+                    obj.y,
+                    obj.angle,
+                    obj.x_vel,
+                    obj.y_vel,
+                );
+                ptr.to_osc()
+            }
+        };
+        content.push(OscPacket::Message(msg));
     }
 
     // 3. Add ALV message with all active session IDs

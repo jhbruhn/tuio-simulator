@@ -76,7 +76,7 @@ function App() {
   return (
     <div className="flex h-screen bg-gray-900">
       {/* Sidebar Controls */}
-      <div className="w-80 bg-gray-800 text-white p-4 overflow-y-auto">
+      <div className="w-96 bg-gray-800 text-white p-4 overflow-y-auto">
         <h1 className="text-2xl font-bold mb-6">TUIO Simulator</h1>
 
         {/* Server Controls */}
