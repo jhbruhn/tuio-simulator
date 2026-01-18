@@ -316,7 +316,7 @@ function App() {
       </div>
 
       {/* Main Canvas Area */}
-      <div className="flex-1 flex items-center justify-center bg-gray-900 p-8">
+      <div className="flex-1 flex items-center justify-center bg-gray-900 p-4 overflow-auto">
         <div className="relative">
           <div
             onMouseDown={interactionHandlers.handleMouseDown}
