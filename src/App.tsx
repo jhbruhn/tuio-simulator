@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Canvas } from "./components/Canvas";
 import { PropertyPanel } from "./components/PropertyPanel";
 import { StatusBar } from "./components/StatusBar";
@@ -9,11 +9,21 @@ import { useWebSocketServer } from "./hooks/useWebSocketServer";
 import { useCanvasInteraction } from "./hooks/useCanvasInteraction";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useSettings } from "./hooks/useSettings";
+import { useCanvasDimensions } from "./hooks/useCanvasDimensions";
 import { pixelToNormalized, clampNormalized } from "./utils/coordinates";
 
 function App() {
   const { settings, updateSettings } = useSettings();
-  const { canvasWidth, canvasHeight, showGrid, canvasScale } = settings;
+  const { showGrid, aspectRatio } = settings;
+
+  // Ref for canvas container to measure available space
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
+
+  // Calculate canvas dimensions based on available space and aspect ratio
+  const { width: canvasWidth, height: canvasHeight } = useCanvasDimensions({
+    containerRef: canvasContainerRef,
+    aspectRatio,
+  });
 
   // Dragging token from palette
   const [draggingTokenId, setDraggingTokenId] = useState<number | null>(null);
@@ -57,7 +67,7 @@ function App() {
     objects,
     dimensions: { width: canvasWidth, height: canvasHeight },
     selectedObjects,
-    canvasScale,
+    canvasScale: 1.0, // No scaling - canvas always fills available space
     onObjectUpdated: updateObject,
     onObjectClicked: (sessionId) => {
       console.log("Object clicked:", sessionId);
@@ -109,9 +119,9 @@ function App() {
 
     const rect = canvasEl.getBoundingClientRect();
 
-    // Calculate position relative to canvas (accounting for scale)
-    const canvasX = (e.clientX - rect.left) / canvasScale;
-    const canvasY = (e.clientY - rect.top) / canvasScale;
+    // Calculate position relative to canvas (no scale needed - always 1:1)
+    const canvasX = e.clientX - rect.left;
+    const canvasY = e.clientY - rect.top;
 
     // Convert to normalized coordinates
     const normalized = pixelToNormalized(
@@ -250,33 +260,25 @@ function App() {
         <div className="flex-1 flex bg-gray-900 overflow-hidden">
           {/* Canvas Center */}
           <div
-            className="flex-1 flex items-center justify-center p-4 overflow-auto"
+            ref={canvasContainerRef}
+            className="flex-1 flex items-center justify-center p-4"
             onDragOver={handleCanvasDragOver}
             onDrop={handleCanvasDrop}
           >
             <div className="relative">
-              <div
-                style={{
-                  transform: `scale(${canvasScale})`,
-                  transformOrigin: "center center",
-                }}
-                className="shadow-2xl"
-              >
-                <Canvas
-                  objects={objects}
-                  width={canvasWidth}
-                  height={canvasHeight}
-                  showGrid={showGrid}
-                  selectedObjects={selectedObjects}
-                  onMouseDown={interactionHandlers.handleMouseDown}
-                  onMouseMove={interactionHandlers.handleMouseMove}
-                  onMouseUp={interactionHandlers.handleMouseUp}
-                  onWheel={interactionHandlers.handleWheel}
-                />
-              </div>
+              <Canvas
+                objects={objects}
+                width={canvasWidth}
+                height={canvasHeight}
+                showGrid={showGrid}
+                selectedObjects={selectedObjects}
+                onMouseDown={interactionHandlers.handleMouseDown}
+                onMouseMove={interactionHandlers.handleMouseMove}
+                onMouseUp={interactionHandlers.handleMouseUp}
+                onWheel={interactionHandlers.handleWheel}
+              />
               <div className="absolute -bottom-8 left-0 right-0 text-center text-xs text-gray-500">
-                {canvasWidth}×{canvasHeight}px @ {Math.round(canvasScale * 100)}%
-                scale
+                {canvasWidth}×{canvasHeight}px ({aspectRatio.toFixed(2)}:1)
               </div>
             </div>
           </div>

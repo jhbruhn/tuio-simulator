@@ -3,19 +3,15 @@ import { useState, useEffect } from "react";
 interface Settings {
   port: number;
   fps: number;
-  canvasWidth: number;
-  canvasHeight: number;
   showGrid: boolean;
-  canvasScale: number;
+  aspectRatio: number; // Width / Height (e.g., 16/9 = 1.778)
 }
 
 const DEFAULT_SETTINGS: Settings = {
   port: 3333,
   fps: 60,
-  canvasWidth: 1920,
-  canvasHeight: 1080,
   showGrid: true,
-  canvasScale: 0.6,
+  aspectRatio: 16 / 9, // Default 16:9 aspect ratio
 };
 
 const SETTINGS_KEY = "tuio-simulator-settings";
