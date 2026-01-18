@@ -1,8 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Canvas } from "./components/Canvas";
 import { PropertyPanel } from "./components/PropertyPanel";
 import { StatusBar } from "./components/StatusBar";
-import { TokenPalette } from "./components/TokenPalette";
 import { OscDebugger } from "./components/OscDebugger";
 import { ControlPanel } from "./components/ControlPanel";
 import { useTuioObjects } from "./hooks/useTuioObjects";
@@ -15,9 +14,6 @@ import { pixelToNormalized, clampNormalized } from "./utils/coordinates";
 function App() {
   const { settings, updateSettings } = useSettings();
   const { canvasWidth, canvasHeight, showGrid, canvasScale } = settings;
-
-  // Track which component IDs are currently active on the canvas
-  const [activeTokens, setActiveTokens] = useState<Set<number>>(new Set());
 
   // Dragging token from palette
   const [draggingTokenId, setDraggingTokenId] = useState<number | null>(null);
@@ -87,11 +83,11 @@ function App() {
     }
   };
 
-  // Update active tokens when objects change
-  useEffect(() => {
-    const active = new Set(objects.map((obj) => obj.component_id));
-    setActiveTokens(active);
-  }, [objects]);
+  // Track which component IDs are currently active on the canvas
+  // Using useMemo to prevent unnecessary re-renders and flickering
+  const activeTokens = useMemo(() => {
+    return new Set(objects.map((obj) => obj.component_id));
+  }, [objects.map((obj) => obj.component_id).sort().join(',')]);
 
   const handleTokenDragStart = (componentId: number) => {
     setDraggingTokenId(componentId);
@@ -183,7 +179,7 @@ function App() {
     <div className="flex flex-col h-screen bg-gray-900">
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar Controls */}
-        <div className="w-[400px] shrink-0 bg-gray-800 text-white p-4 overflow-y-auto">
+        <div className="w-[320px] shrink-0 bg-gray-800 text-white p-4 overflow-y-auto">
           {/* Server Controls */}
           <ControlPanel
             isRunning={isRunning}
@@ -202,15 +198,9 @@ function App() {
             onOpenDebugger={() => setIsDebuggerOpen(true)}
           />
 
-          {/* Token Palette */}
+          {/* Controls */}
           <div className="mb-6">
-            <TokenPalette
-              activeTokens={activeTokens}
-              onTokenDragStart={handleTokenDragStart}
-              onTokenReturn={handleTokenReturn}
-            />
-
-            <div className="mt-3">
+            <div className="mb-3">
               <button
                 onClick={handleRemoveSelected}
                 disabled={selectedObjects.size === 0}
@@ -257,34 +247,91 @@ function App() {
         </div>
 
         {/* Main Canvas Area */}
-        <div
-          className="flex-1 flex items-center justify-center bg-gray-900 p-4 overflow-auto"
-          onDragOver={handleCanvasDragOver}
-          onDrop={handleCanvasDrop}
-        >
-          <div className="relative">
-            <div
-              style={{
-                transform: `scale(${canvasScale})`,
-                transformOrigin: "center center",
-              }}
-              className="shadow-2xl"
-            >
-              <Canvas
-                objects={objects}
-                width={canvasWidth}
-                height={canvasHeight}
-                showGrid={showGrid}
-                selectedObjects={selectedObjects}
-                onMouseDown={interactionHandlers.handleMouseDown}
-                onMouseMove={interactionHandlers.handleMouseMove}
-                onMouseUp={interactionHandlers.handleMouseUp}
-                onWheel={interactionHandlers.handleWheel}
-              />
+        <div className="flex-1 flex bg-gray-900 overflow-hidden">
+          {/* Canvas Center */}
+          <div
+            className="flex-1 flex items-center justify-center p-4 overflow-auto"
+            onDragOver={handleCanvasDragOver}
+            onDrop={handleCanvasDrop}
+          >
+            <div className="relative">
+              <div
+                style={{
+                  transform: `scale(${canvasScale})`,
+                  transformOrigin: "center center",
+                }}
+                className="shadow-2xl"
+              >
+                <Canvas
+                  objects={objects}
+                  width={canvasWidth}
+                  height={canvasHeight}
+                  showGrid={showGrid}
+                  selectedObjects={selectedObjects}
+                  onMouseDown={interactionHandlers.handleMouseDown}
+                  onMouseMove={interactionHandlers.handleMouseMove}
+                  onMouseUp={interactionHandlers.handleMouseUp}
+                  onWheel={interactionHandlers.handleWheel}
+                />
+              </div>
+              <div className="absolute -bottom-8 left-0 right-0 text-center text-xs text-gray-500">
+                {canvasWidth}×{canvasHeight}px @ {Math.round(canvasScale * 100)}%
+                scale
+              </div>
             </div>
-            <div className="absolute -bottom-8 left-0 right-0 text-center text-xs text-gray-500">
-              {canvasWidth}×{canvasHeight}px @ {Math.round(canvasScale * 100)}%
-              scale
+          </div>
+
+          {/* Token Repository - Right Side */}
+          <div className="w-[280px] shrink-0 bg-gray-800 text-white p-4 overflow-y-auto">
+            <div className="mb-4">
+              <h3 className="font-semibold text-sm mb-1">Token Repository</h3>
+              <span className="text-xs text-gray-400">
+                {activeTokens.size}/24 active
+              </span>
+            </div>
+            <div className="text-xs text-gray-400 mb-3">
+              Drag tokens to canvas to activate them
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {Array.from({ length: 24 }, (_, i) => i + 1).map((componentId) => {
+                const isActive = activeTokens.has(componentId);
+                const hue = ((componentId - 1) * 137) % 360;
+                const color = `hsl(${hue}, 70%, 50%)`;
+
+                return (
+                  <div
+                    key={componentId}
+                    draggable={!isActive}
+                    onDragStart={(e) => {
+                      e.dataTransfer.effectAllowed = 'move';
+                      e.dataTransfer.setData('componentId', componentId.toString());
+                      handleTokenDragStart(componentId);
+                    }}
+                    onClick={() => isActive && handleTokenReturn(componentId)}
+                    className={`
+                      relative aspect-square rounded-lg border-2 flex flex-col items-center justify-center
+                      cursor-pointer transition-all select-none
+                      ${isActive
+                        ? 'opacity-30 border-gray-600 cursor-not-allowed'
+                        : 'border-gray-500 hover:border-white hover:scale-105 active:scale-95'
+                      }
+                    `}
+                    style={{
+                      backgroundColor: isActive ? '#1a1a1a' : color,
+                    }}
+                    title={isActive ? `Token ${componentId} (On canvas - click to return)` : `Drag Token ${componentId} to canvas`}
+                  >
+                    <div className="text-base font-bold text-white drop-shadow-md">
+                      {componentId}
+                    </div>
+                    {isActive && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg">
+                        <div className="text-xs text-white">Active</div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -300,8 +347,8 @@ function App() {
         selectedObjects={selectedObjects.size}
       />
 
-      {/* OSC Debugger Modal */}
-      <OscDebugger isOpen={isDebuggerOpen} onClose={() => setIsDebuggerOpen(false)} />
+      {/* OSC Debugger Bottom Panel */}
+      <OscDebugger isOpen={isDebuggerOpen} onToggle={() => setIsDebuggerOpen(!isDebuggerOpen)} />
     </div>
   );
 }
