@@ -149,41 +149,41 @@ function App() {
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar Controls */}
         <div className="w-[400px] shrink-0 bg-gray-800 text-white p-4 overflow-y-auto">
-        <h1 className="text-2xl font-bold mb-6">TUIO Simulator</h1>
-
         {/* Server Controls */}
         <div className="mb-6">
           <h2 className="text-lg font-semibold mb-3">Server</h2>
 
           <div className="space-y-3">
-            <div>
-              <label className="block text-sm mb-1">Port</label>
-              <input
-                type="number"
-                value={portInput}
-                onChange={(e) => {
-                  const newPort = parseInt(e.target.value) || 3333;
-                  setPortInput(newPort);
-                  updateSettings({ port: newPort });
-                }}
-                disabled={isRunning}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white disabled:opacity-50"
-              />
-            </div>
-            <div>
-              <label className="block text-sm mb-1">FPS</label>
-              <input
-                type="number"
-                value={fps}
-                onChange={(e) => {
-                  const newFps = parseInt(e.target.value);
-                  setFps(newFps);
-                  updateSettings({ fps: newFps });
-                }}
-                min="1"
-                max="120"
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
-              />
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="block text-sm mb-1">Port</label>
+                <input
+                  type="number"
+                  value={portInput}
+                  onChange={(e) => {
+                    const newPort = parseInt(e.target.value) || 3333;
+                    setPortInput(newPort);
+                    updateSettings({ port: newPort });
+                  }}
+                  disabled={isRunning}
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white disabled:opacity-50"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-sm mb-1">FPS</label>
+                <input
+                  type="number"
+                  value={fps}
+                  onChange={(e) => {
+                    const newFps = parseInt(e.target.value);
+                    setFps(newFps);
+                    updateSettings({ fps: newFps });
+                  }}
+                  min="1"
+                  max="120"
+                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
+                />
+              </div>
             </div>
           </div>
 
