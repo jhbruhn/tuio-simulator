@@ -1,10 +1,15 @@
+use crate::events;
 use crate::state::{AppState, ServerStatus, TuioObject};
 use crate::tuio::frame::generate_frame;
 use std::time::Duration;
-use tauri::State;
+use tauri::{AppHandle, State};
 
 #[tauri::command]
-pub async fn start_server(state: State<'_, AppState>, port: u16) -> Result<(), String> {
+pub async fn start_server(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    port: u16,
+) -> Result<(), String> {
     // Check if already running
     {
         let running = state.server_running.lock();
@@ -28,8 +33,9 @@ pub async fn start_server(state: State<'_, AppState>, port: u16) -> Result<(), S
 
     // Start frame generation task
     let state_clone = state.inner().clone();
+    let app_clone = app.clone();
     let task = tokio::spawn(async move {
-        frame_generation_loop(state_clone).await;
+        frame_generation_loop(state_clone, app_clone).await;
     });
 
     // Store task handle
@@ -191,7 +197,7 @@ pub async fn get_server_status(state: State<'_, AppState>) -> Result<ServerStatu
 }
 
 /// Frame generation loop that runs continuously while the server is running
-async fn frame_generation_loop(state: AppState) {
+async fn frame_generation_loop(state: AppState, app: AppHandle) {
     loop {
         // Check if server is still running
         {
@@ -204,6 +210,23 @@ async fn frame_generation_loop(state: AppState) {
         // Generate frame
         match generate_frame(&state) {
             Ok(frame_data) => {
+                // Get current frame info for debugging
+                let frame_id = *state.frame_counter.lock();
+                let object_count = state.objects.lock().len();
+                let message_size = frame_data.len();
+                let connected_clients = state.get_connected_clients();
+                let timestamp = chrono::Utc::now().timestamp_millis();
+
+                // Emit OSC message debug event
+                events::emit_osc_message(
+                    &app,
+                    frame_id,
+                    timestamp,
+                    object_count,
+                    message_size,
+                    connected_clients,
+                );
+
                 // Broadcast to all connected clients
                 if let Err(e) = state.websocket_server.broadcast(frame_data).await {
                     eprintln!("Error broadcasting frame: {}", e);

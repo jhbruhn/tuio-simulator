@@ -23,6 +23,15 @@ pub struct ServerStatusEvent {
     pub connected_clients: usize,
 }
 
+#[derive(Clone, Serialize)]
+pub struct OscMessageEvent {
+    pub frame_id: u32,
+    pub timestamp: i64,
+    pub object_count: usize,
+    pub message_size: usize,
+    pub connected_clients: usize,
+}
+
 /// Emit a client connected event
 pub fn emit_client_connected(app: &AppHandle, client_id: String) {
     let event = ClientConnectedEvent { client_id };
@@ -51,4 +60,23 @@ pub fn emit_server_status(app: &AppHandle, running: bool, connected_clients: usi
         connected_clients,
     };
     let _ = app.emit("server_status", event);
+}
+
+/// Emit an OSC message debug event
+pub fn emit_osc_message(
+    app: &AppHandle,
+    frame_id: u32,
+    timestamp: i64,
+    object_count: usize,
+    message_size: usize,
+    connected_clients: usize,
+) {
+    let event = OscMessageEvent {
+        frame_id,
+        timestamp,
+        object_count,
+        message_size,
+        connected_clients,
+    };
+    let _ = app.emit("osc_message", event);
 }

@@ -3,6 +3,7 @@ import { Canvas } from "./components/Canvas";
 import { PropertyPanel } from "./components/PropertyPanel";
 import { StatusBar } from "./components/StatusBar";
 import { TokenPalette } from "./components/TokenPalette";
+import { OscDebugger } from "./components/OscDebugger";
 import { useTuioObjects } from "./hooks/useTuioObjects";
 import { useWebSocketServer } from "./hooks/useWebSocketServer";
 import { useCanvasInteraction } from "./hooks/useCanvasInteraction";
@@ -19,6 +20,9 @@ function App() {
 
   // Dragging token from palette
   const [draggingTokenId, setDraggingTokenId] = useState<number | null>(null);
+
+  // OSC Debugger state
+  const [isDebuggerOpen, setIsDebuggerOpen] = useState(false);
 
   // Local port state for input field (separate from server status)
   const [portInput, setPortInput] = useState(settings.port);
@@ -233,6 +237,14 @@ function App() {
                 Stop
               </button>
             </div>
+
+            <button
+              onClick={() => setIsDebuggerOpen(true)}
+              className="w-full px-3 py-2 mt-2 bg-purple-600 rounded hover:bg-purple-700 text-sm font-medium"
+              title="Open OSC Message Debugger"
+            >
+              🐛 OSC Debugger
+            </button>
           </div>
 
           {/* Token Palette */}
@@ -332,6 +344,9 @@ function App() {
         totalObjects={objects.length}
         selectedObjects={selectedObjects.size}
       />
+
+      {/* OSC Debugger Modal */}
+      <OscDebugger isOpen={isDebuggerOpen} onClose={() => setIsDebuggerOpen(false)} />
     </div>
   );
 }
