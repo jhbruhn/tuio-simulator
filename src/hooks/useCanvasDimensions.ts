@@ -29,8 +29,10 @@ export function useCanvasDimensions({
       if (!containerRef.current) return;
 
       const container = containerRef.current;
-      const containerWidth = container.clientWidth;
-      const containerHeight = container.clientHeight;
+      // Account for padding (p-4 = 16px on each side = 32px total)
+      const padding = 32;
+      const containerWidth = container.clientWidth - padding;
+      const containerHeight = container.clientHeight - padding;
 
       // Calculate dimensions that fit within container while maintaining aspect ratio
       let width: number;
@@ -46,10 +48,10 @@ export function useCanvasDimensions({
         width = height * aspectRatio;
       }
 
-      // Round to whole pixels
+      // Round to whole pixels and ensure minimum size
       setDimensions({
-        width: Math.floor(width),
-        height: Math.floor(height),
+        width: Math.max(100, Math.floor(width)),
+        height: Math.max(100, Math.floor(height)),
       });
     };
 

@@ -205,7 +205,6 @@ function App() {
             }}
             onStartServer={handleStartServer}
             onStopServer={handleStopServer}
-            onOpenDebugger={() => setIsDebuggerOpen(true)}
           />
 
           {/* Controls */}

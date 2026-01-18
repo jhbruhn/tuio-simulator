@@ -8,7 +8,6 @@ interface ControlPanelProps {
   onFpsChange: (fps: number) => void;
   onStartServer: () => void;
   onStopServer: () => void;
-  onOpenDebugger: () => void;
 }
 
 export const ControlPanel: React.FC<ControlPanelProps> = ({
@@ -19,7 +18,6 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
   onFpsChange,
   onStartServer,
   onStopServer,
-  onOpenDebugger,
 }) => {
   return (
     <div className="mb-6">
@@ -73,14 +71,6 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
           Stop
         </button>
       </div>
-
-      <button
-        onClick={onOpenDebugger}
-        className="w-full px-3 py-2 mt-2 bg-purple-600 rounded hover:bg-purple-700 text-sm font-medium"
-        title="Open OSC Message Debugger"
-      >
-        🐛 OSC Debugger
-      </button>
     </div>
   );
 };
