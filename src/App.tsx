@@ -4,6 +4,7 @@ import { PropertyPanel } from "./components/PropertyPanel";
 import { StatusBar } from "./components/StatusBar";
 import { TokenPalette } from "./components/TokenPalette";
 import { OscDebugger } from "./components/OscDebugger";
+import { ControlPanel } from "./components/ControlPanel";
 import { useTuioObjects } from "./hooks/useTuioObjects";
 import { useWebSocketServer } from "./hooks/useWebSocketServer";
 import { useCanvasInteraction } from "./hooks/useCanvasInteraction";
@@ -184,68 +185,22 @@ function App() {
         {/* Sidebar Controls */}
         <div className="w-[400px] shrink-0 bg-gray-800 text-white p-4 overflow-y-auto">
           {/* Server Controls */}
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold mb-3">Server</h2>
-
-            <div className="space-y-3">
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <label className="block text-sm mb-1">Port</label>
-                  <input
-                    type="number"
-                    value={portInput}
-                    onChange={(e) => {
-                      const newPort = parseInt(e.target.value) || 3333;
-                      setPortInput(newPort);
-                      updateSettings({ port: newPort });
-                    }}
-                    disabled={isRunning}
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white disabled:opacity-50"
-                  />
-                </div>
-                <div className="flex-1">
-                  <label className="block text-sm mb-1">FPS</label>
-                  <input
-                    type="number"
-                    value={fps}
-                    onChange={(e) => {
-                      const newFps = parseInt(e.target.value);
-                      setFps(newFps);
-                      updateSettings({ fps: newFps });
-                    }}
-                    min="1"
-                    max="120"
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-2 mt-3">
-              <button
-                onClick={handleStartServer}
-                disabled={isRunning}
-                className="flex-1 px-3 py-2 bg-green-600 rounded hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-sm font-medium"
-              >
-                Start
-              </button>
-              <button
-                onClick={handleStopServer}
-                disabled={!isRunning}
-                className="flex-1 px-3 py-2 bg-red-600 rounded hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-sm font-medium"
-              >
-                Stop
-              </button>
-            </div>
-
-            <button
-              onClick={() => setIsDebuggerOpen(true)}
-              className="w-full px-3 py-2 mt-2 bg-purple-600 rounded hover:bg-purple-700 text-sm font-medium"
-              title="Open OSC Message Debugger"
-            >
-              🐛 OSC Debugger
-            </button>
-          </div>
+          <ControlPanel
+            isRunning={isRunning}
+            portInput={portInput}
+            fps={fps}
+            onPortChange={(newPort) => {
+              setPortInput(newPort);
+              updateSettings({ port: newPort });
+            }}
+            onFpsChange={(newFps) => {
+              setFps(newFps);
+              updateSettings({ fps: newFps });
+            }}
+            onStartServer={handleStartServer}
+            onStopServer={handleStopServer}
+            onOpenDebugger={() => setIsDebuggerOpen(true)}
+          />
 
           {/* Token Palette */}
           <div className="mb-6">
