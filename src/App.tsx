@@ -16,12 +16,12 @@ function App() {
   const { settings, updateSettings } = useSettings();
   const { showGrid, aspectRatio } = settings;
 
-  // Ref for the parent container to measure available space
-  const canvasAreaRef = useRef<HTMLDivElement>(null);
+  // Ref for canvas container to measure available space
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
 
   // Calculate canvas dimensions based on available space and aspect ratio
   const { width: canvasWidth, height: canvasHeight } = useCanvasDimensions({
-    containerRef: canvasAreaRef,
+    containerRef: canvasContainerRef,
     aspectRatio,
   });
 
@@ -260,23 +260,24 @@ function App() {
         <div className="flex-1 flex bg-gray-900 overflow-hidden">
           {/* Canvas Center */}
           <div
-            ref={canvasAreaRef}
             className="flex-1 flex items-center justify-center p-4"
             onDragOver={handleCanvasDragOver}
             onDrop={handleCanvasDrop}
           >
-            <div className="relative">
-              <Canvas
-                objects={objects}
-                width={canvasWidth}
-                height={canvasHeight}
-                showGrid={showGrid}
-                selectedObjects={selectedObjects}
-                onMouseDown={interactionHandlers.handleMouseDown}
-                onMouseMove={interactionHandlers.handleMouseMove}
-                onMouseUp={interactionHandlers.handleMouseUp}
-                onWheel={interactionHandlers.handleWheel}
-              />
+            <div className="relative max-w-full max-h-full" style={{ aspectRatio: aspectRatio }}>
+              <div ref={canvasContainerRef} className="absolute inset-0">
+                <Canvas
+                  objects={objects}
+                  width={canvasWidth}
+                  height={canvasHeight}
+                  showGrid={showGrid}
+                  selectedObjects={selectedObjects}
+                  onMouseDown={interactionHandlers.handleMouseDown}
+                  onMouseMove={interactionHandlers.handleMouseMove}
+                  onMouseUp={interactionHandlers.handleMouseUp}
+                  onWheel={interactionHandlers.handleWheel}
+                />
+              </div>
               <div className="absolute -bottom-8 left-0 right-0 text-center text-xs text-gray-500">
                 {canvasWidth}×{canvasHeight}px ({aspectRatio.toFixed(2)}:1)
               </div>

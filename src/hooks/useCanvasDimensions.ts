@@ -31,33 +31,19 @@ export function useCanvasDimensions({
       if (!containerRef.current) return;
 
       const container = containerRef.current;
-      // Account for padding (p-4 = 16px on each side)
-      const availableWidth = container.clientWidth - 32;
-      const availableHeight = container.clientHeight - 32;
+      // CSS aspect-ratio handles the ratio, we just read the actual size
+      const newWidth = Math.floor(container.clientWidth);
+      const newHeight = Math.floor(container.clientHeight);
 
       // Ignore invalid dimensions
-      if (availableWidth <= 0 || availableHeight <= 0) return;
+      if (newWidth === 0 || newHeight === 0) return;
 
-      // Calculate dimensions that fit while maintaining aspect ratio
-      let newWidth: number;
-      let newHeight: number;
-
-      // Try width-constrained
-      newWidth = availableWidth;
-      newHeight = Math.floor(newWidth / aspectRatio);
-
-      // If height doesn't fit, use height-constrained
-      if (newHeight > availableHeight) {
-        newHeight = availableHeight;
-        newWidth = Math.floor(newHeight * aspectRatio);
-      }
-
-      // Only update if dimensions actually changed by more than 2px (prevent feedback loop)
+      // Only update if dimensions actually changed by more than 1px (prevent feedback loop)
       setDimensions((prev) => {
         const widthDiff = Math.abs(prev.width - newWidth);
         const heightDiff = Math.abs(prev.height - newHeight);
 
-        if (widthDiff <= 2 && heightDiff <= 2) {
+        if (widthDiff <= 1 && heightDiff <= 1) {
           return prev;
         }
         return { width: newWidth, height: newHeight };
