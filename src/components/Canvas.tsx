@@ -50,29 +50,63 @@ export function Canvas({ objects, width, height, showGrid = false, selectedObjec
 }
 
 /**
- * Draw a grid on the canvas for reference
+ * Draw a grid on the canvas for reference with coordinate labels
  */
 function drawGrid(ctx: CanvasRenderingContext2D, width: number, height: number) {
-  const gridSize = 50; // pixels
+  const gridSize = 100; // pixels
 
   ctx.strokeStyle = "#e0e0e0";
   ctx.lineWidth = 1;
 
-  // Vertical lines
+  // Vertical lines with labels
   for (let x = 0; x <= width; x += gridSize) {
+    // Draw line
     ctx.beginPath();
     ctx.moveTo(x, 0);
     ctx.lineTo(x, height);
     ctx.stroke();
+
+    // Draw coordinate label
+    if (x > 0) {
+      ctx.fillStyle = "#999";
+      ctx.font = "10px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(x.toString(), x, 12);
+    }
   }
 
-  // Horizontal lines
+  // Horizontal lines with labels
   for (let y = 0; y <= height; y += gridSize) {
+    // Draw line
     ctx.beginPath();
     ctx.moveTo(0, y);
     ctx.lineTo(width, y);
     ctx.stroke();
+
+    // Draw coordinate label
+    if (y > 0) {
+      ctx.fillStyle = "#999";
+      ctx.font = "10px sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText(y.toString(), 4, y + 12);
+    }
   }
+
+  // Draw origin label
+  ctx.fillStyle = "#666";
+  ctx.font = "10px sans-serif";
+  ctx.textAlign = "left";
+  ctx.fillText("(0, 0)", 4, 12);
+
+  // Draw normalized coordinate labels at corners
+  ctx.fillStyle = "#666";
+  ctx.font = "10px sans-serif";
+  ctx.textAlign = "right";
+  ctx.fillText("(1.0, 0.0)", width - 4, 12);
+  ctx.textAlign = "left";
+  ctx.fillText("(0.0, 1.0)", 4, height - 4);
+  ctx.textAlign = "right";
+  ctx.fillText("(1.0, 1.0)", width - 4, height - 4);
 }
 
 /**
