@@ -260,12 +260,15 @@ function App() {
         <div className="flex-1 flex bg-gray-900 overflow-hidden">
           {/* Canvas Center */}
           <div
-            ref={canvasContainerRef}
             className="flex-1 flex items-center justify-center p-4"
             onDragOver={handleCanvasDragOver}
             onDrop={handleCanvasDrop}
           >
-            <div className="relative">
+            <div
+              ref={canvasContainerRef}
+              className="relative max-w-full max-h-full"
+              style={{ aspectRatio: aspectRatio }}
+            >
               <Canvas
                 objects={objects}
                 width={canvasWidth}

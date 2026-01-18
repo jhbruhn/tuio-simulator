@@ -29,30 +29,9 @@ export function useCanvasDimensions({
       if (!containerRef.current) return;
 
       const container = containerRef.current;
-      // Account for padding (p-4 = 16px on each side = 32px total)
-      const padding = 32;
-      const containerWidth = container.clientWidth - padding;
-      const containerHeight = container.clientHeight - padding;
-
-      // Calculate dimensions that fit within container while maintaining EXACT aspect ratio
-      let newWidth: number;
-      let newHeight: number;
-
-      // Try width-constrained first
-      newWidth = Math.floor(containerWidth);
-      newHeight = Math.floor(newWidth / aspectRatio);
-
-      // If height doesn't fit, use height-constrained instead
-      if (newHeight > containerHeight) {
-        newHeight = Math.floor(containerHeight);
-        newWidth = Math.floor(newHeight * aspectRatio);
-      }
-
-      // Apply minimum size constraints while maintaining ratio
-      if (newWidth < 100 || newHeight < 100) {
-        newWidth = 100;
-        newHeight = Math.floor(newWidth / aspectRatio);
-      }
+      // CSS aspect-ratio handles the ratio, we just read the actual size
+      const newWidth = Math.floor(container.clientWidth);
+      const newHeight = Math.floor(container.clientHeight);
 
       // Only update if dimensions actually changed (prevent feedback loop)
       setDimensions((prev) => {
@@ -63,8 +42,8 @@ export function useCanvasDimensions({
       });
     };
 
-    // Initial calculation
-    updateDimensions();
+    // Delay initial calculation to let CSS apply
+    const timeoutId = setTimeout(updateDimensions, 0);
 
     // Update on resize
     const resizeObserver = new ResizeObserver(updateDimensions);
@@ -73,6 +52,7 @@ export function useCanvasDimensions({
     }
 
     return () => {
+      clearTimeout(timeoutId);
       resizeObserver.disconnect();
     };
   }, [containerRef, aspectRatio]);
