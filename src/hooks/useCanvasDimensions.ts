@@ -34,24 +34,25 @@ export function useCanvasDimensions({
       const containerWidth = container.clientWidth - padding;
       const containerHeight = container.clientHeight - padding;
 
-      // Calculate dimensions that fit within container while maintaining aspect ratio
-      // Try both width-constrained and height-constrained fits
-      const widthConstrainedHeight = containerWidth / aspectRatio;
-      const heightConstrainedWidth = containerHeight * aspectRatio;
+      // Calculate dimensions that fit within container while maintaining EXACT aspect ratio
+      let newWidth: number;
+      let newHeight: number;
 
-      // Choose the dimension that fits within the container
-      let finalWidth: number;
-      if (widthConstrainedHeight <= containerHeight) {
-        // Width-constrained: use full width, calculate height
-        finalWidth = containerWidth;
-      } else {
-        // Height-constrained: use full height, calculate width
-        finalWidth = heightConstrainedWidth;
+      // Try width-constrained first
+      newWidth = Math.floor(containerWidth);
+      newHeight = Math.floor(newWidth / aspectRatio);
+
+      // If height doesn't fit, use height-constrained instead
+      if (newHeight > containerHeight) {
+        newHeight = Math.floor(containerHeight);
+        newWidth = Math.floor(newHeight * aspectRatio);
       }
 
-      // Round width and calculate height to maintain exact aspect ratio
-      const newWidth = Math.max(100, Math.floor(finalWidth));
-      const newHeight = Math.max(100, Math.floor(newWidth / aspectRatio));
+      // Apply minimum size constraints while maintaining ratio
+      if (newWidth < 100 || newHeight < 100) {
+        newWidth = 100;
+        newHeight = Math.floor(newWidth / aspectRatio);
+      }
 
       // Only update if dimensions actually changed (prevent feedback loop)
       setDimensions((prev) => {
