@@ -189,23 +189,6 @@ function App() {
               Stop
             </button>
           </div>
-
-          <div className="mt-3 pt-3 border-t border-gray-700 space-y-1 text-sm">
-            <div className="flex justify-between">
-              <span>Status:</span>
-              <span className={isRunning ? "text-green-400" : "text-red-400"}>
-                {isRunning ? "Running" : "Stopped"}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span>Clients:</span>
-              <span>{connectedClients}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Frames:</span>
-              <span>{frameCount}</span>
-            </div>
-          </div>
         </div>
 
         {/* Object Controls */}
@@ -263,19 +246,6 @@ function App() {
                 Delete
               </button>
             </div>
-          </div>
-
-          <div className="mt-3 pt-3 border-t border-gray-700 space-y-1 text-sm">
-            <div className="flex justify-between">
-              <span>Total:</span>
-              <span>{objects.length}</span>
-            </div>
-            {interactionState.selectedId && (
-              <div className="flex justify-between">
-                <span>Selected:</span>
-                <span>#{interactionState.selectedId}</span>
-              </div>
-            )}
           </div>
 
           {/* Property Panel */}
