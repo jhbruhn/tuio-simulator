@@ -137,7 +137,7 @@ function App() {
     <div className="flex flex-col h-screen bg-gray-900">
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar Controls */}
-        <div className="w-96 bg-gray-800 text-white p-4 overflow-y-auto">
+        <div className="w-[450px] bg-gray-800 text-white p-4 overflow-y-auto">
         <h1 className="text-2xl font-bold mb-6">TUIO Simulator</h1>
 
         {/* Server Controls */}
