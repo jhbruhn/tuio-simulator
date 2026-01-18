@@ -264,7 +264,11 @@ function App() {
             onDragOver={handleCanvasDragOver}
             onDrop={handleCanvasDrop}
           >
-            <div className="relative max-w-full max-h-full" style={{ aspectRatio: aspectRatio }}>
+            <div className="relative inline-block" style={{
+              aspectRatio: aspectRatio,
+              width: '100%',
+              maxHeight: '100%'
+            }}>
               <div ref={canvasContainerRef} className="absolute inset-0">
                 <Canvas
                   objects={objects}
