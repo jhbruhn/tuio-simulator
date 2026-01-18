@@ -12,6 +12,8 @@ function App() {
   const [showGrid, setShowGrid] = useState(true);
   // Scale down canvas to fit viewport (60% of actual size)
   const [canvasScale] = useState(0.6);
+  // Selected object type for adding new objects
+  const [selectedTypeId, setSelectedTypeId] = useState(1);
 
   const {
     objects,
@@ -66,7 +68,7 @@ function App() {
 
   const handleAddObject = async () => {
     try {
-      await addObject(1, 0.5, 0.5);
+      await addObject(selectedTypeId, 0.5, 0.5);
     } catch (err) {
       console.error("Failed to add object:", err);
     }
@@ -202,12 +204,40 @@ function App() {
         <div className="mb-6">
           <h2 className="text-lg font-semibold mb-3">Objects</h2>
 
+          {/* Object Type Palette */}
+          <div className="mb-3">
+            <label className="block text-sm mb-2">Object Type</label>
+            <div className="grid grid-cols-5 gap-2">
+              {[1, 2, 3, 4, 5].map((typeId) => {
+                const hue = (typeId * 137) % 360;
+                const isSelected = selectedTypeId === typeId;
+                return (
+                  <button
+                    key={typeId}
+                    onClick={() => setSelectedTypeId(typeId)}
+                    className={`aspect-square rounded flex items-center justify-center text-xs font-medium transition-all ${
+                      isSelected
+                        ? "ring-2 ring-white ring-offset-2 ring-offset-gray-800"
+                        : "hover:ring-1 hover:ring-gray-500"
+                    }`}
+                    style={{
+                      backgroundColor: `hsl(${hue}, 70%, 50%)`,
+                    }}
+                    title={`Type ${typeId}`}
+                  >
+                    {typeId}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="space-y-2">
             <button
               onClick={handleAddObject}
               className="w-full px-3 py-2 bg-blue-600 rounded hover:bg-blue-700 text-sm font-medium"
             >
-              + Add Object
+              + Add Object (Type {selectedTypeId})
             </button>
             <div className="flex gap-2">
               <button
