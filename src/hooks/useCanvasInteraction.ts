@@ -23,6 +23,7 @@ export interface UseCanvasInteractionProps {
   objects: TuioObject[];
   dimensions: CanvasDimensions;
   selectedObjects: Set<number>;
+  canvasScale?: number;
   onObjectUpdated?: (sessionId: number, x: number, y: number, angle: number) => void;
   onObjectClicked?: (sessionId: number) => void;
   toggleSelection?: (sessionId: number) => void;
@@ -42,6 +43,7 @@ export function useCanvasInteraction({
   objects,
   dimensions,
   selectedObjects,
+  canvasScale = 1.0,
   onObjectUpdated,
   onObjectClicked,
   toggleSelection,
@@ -81,8 +83,12 @@ export function useCanvasInteraction({
   const handleMouseDown = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
       const rect = e.currentTarget.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
+      // Get position in visual (scaled) space
+      const visualX = e.clientX - rect.left;
+      const visualY = e.clientY - rect.top;
+      // Scale back to canvas internal resolution
+      const x = visualX / canvasScale;
+      const y = visualY / canvasScale;
 
       const obj = findObjectAtPosition(x, y);
 
@@ -127,7 +133,7 @@ export function useCanvasInteraction({
         }
       }
     },
-    [findObjectAtPosition, onObjectClicked, selectedObjects, toggleSelection, setSelection, clearSelection, objects, dimensions]
+    [findObjectAtPosition, onObjectClicked, selectedObjects, toggleSelection, setSelection, clearSelection, objects, dimensions, canvasScale]
   );
 
   const handleMouseMove = useCallback(
@@ -135,8 +141,12 @@ export function useCanvasInteraction({
       if (!isDragging || selectedObjects.size === 0) return;
 
       const rect = e.currentTarget.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
+      // Get position in visual (scaled) space
+      const visualX = e.clientX - rect.left;
+      const visualY = e.clientY - rect.top;
+      // Scale back to canvas internal resolution
+      const x = visualX / canvasScale;
+      const y = visualY / canvasScale;
 
       // Move all selected objects
       selectedObjects.forEach(sessionId => {
@@ -158,7 +168,7 @@ export function useCanvasInteraction({
         }
       });
     },
-    [isDragging, selectedObjects, objects, dimensions, onObjectUpdated]
+    [isDragging, selectedObjects, objects, dimensions, onObjectUpdated, canvasScale]
   );
 
   const handleMouseUp = useCallback(() => {

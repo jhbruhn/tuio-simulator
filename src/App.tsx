@@ -52,6 +52,7 @@ function App() {
     objects,
     dimensions: { width: canvasWidth, height: canvasHeight },
     selectedObjects,
+    canvasScale,
     onObjectUpdated: updateObject,
     onObjectClicked: (sessionId) => {
       console.log("Object clicked:", sessionId);
