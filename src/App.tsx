@@ -17,6 +17,9 @@ function App() {
     addObject,
     updateObject,
     removeObject,
+    toggleSelection,
+    setSelection,
+    clearSelection,
   } = useTuioObjects();
 
   const {
@@ -33,10 +36,14 @@ function App() {
   const [interactionState, interactionHandlers] = useCanvasInteraction({
     objects,
     dimensions: { width: canvasWidth, height: canvasHeight },
+    selectedObjects,
     onObjectUpdated: updateObject,
     onObjectClicked: (sessionId) => {
       console.log("Object clicked:", sessionId);
     },
+    toggleSelection,
+    setSelection,
+    clearSelection,
   });
 
   const handleStartServer = async () => {
@@ -238,6 +245,7 @@ function App() {
         {/* Instructions */}
         <div className="text-xs text-gray-400 space-y-1">
           <p>• Click to select objects</p>
+          <p>• Ctrl/Cmd+Click to multi-select</p>
           <p>• Drag to move</p>
           <p>• Scroll to rotate</p>
         </div>
@@ -262,6 +270,7 @@ function App() {
               width={canvasWidth}
               height={canvasHeight}
               showGrid={showGrid}
+              selectedObjects={selectedObjects}
             />
           </div>
           <div className="absolute -bottom-8 left-0 right-0 text-center text-xs text-gray-500">

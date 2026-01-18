@@ -22,8 +22,12 @@ export interface CanvasInteractionHandlers {
 export interface UseCanvasInteractionProps {
   objects: TuioObject[];
   dimensions: CanvasDimensions;
+  selectedObjects: Set<number>;
   onObjectUpdated?: (sessionId: number, x: number, y: number, angle: number) => void;
   onObjectClicked?: (sessionId: number) => void;
+  toggleSelection?: (sessionId: number) => void;
+  setSelection?: (sessionIds: Set<number>) => void;
+  clearSelection?: () => void;
 }
 
 /**
@@ -37,12 +41,19 @@ export interface UseCanvasInteractionProps {
 export function useCanvasInteraction({
   objects,
   dimensions,
+  selectedObjects,
   onObjectUpdated,
   onObjectClicked,
+  toggleSelection,
+  setSelection,
+  clearSelection,
 }: UseCanvasInteractionProps): [CanvasInteractionState, CanvasInteractionHandlers] {
-  const [selectedId, setSelectedId] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef<Point | null>(null);
+  const dragOffsetsRef = useRef<Map<number, Point>>(new Map());
+
+  // Get the primary selected object (first in the set)
+  const selectedId = selectedObjects.size > 0 ? Array.from(selectedObjects)[0] : null;
 
   /**
    * Find object at given pixel coordinates
@@ -76,65 +87,108 @@ export function useCanvasInteraction({
       const obj = findObjectAtPosition(x, y);
 
       if (obj) {
-        setSelectedId(obj.session_id);
+        // Handle multi-select with Ctrl/Cmd key
+        if (e.ctrlKey || e.metaKey) {
+          // Toggle selection
+          if (toggleSelection) {
+            toggleSelection(obj.session_id);
+          }
+        } else {
+          // Single select (replace selection)
+          if (!selectedObjects.has(obj.session_id)) {
+            if (setSelection) {
+              setSelection(new Set([obj.session_id]));
+            }
+          }
+        }
+
+        // Start dragging - store initial positions for all selected objects
         setIsDragging(true);
         dragStartRef.current = { x, y };
+
+        const offsets = new Map<number, Point>();
+        selectedObjects.forEach(sessionId => {
+          const selectedObj = objects.find(o => o.session_id === sessionId);
+          if (selectedObj) {
+            const objX = selectedObj.x * dimensions.width;
+            const objY = selectedObj.y * dimensions.height;
+            offsets.set(sessionId, { x: x - objX, y: y - objY });
+          }
+        });
+        dragOffsetsRef.current = offsets;
 
         if (onObjectClicked) {
           onObjectClicked(obj.session_id);
         }
       } else {
-        setSelectedId(null);
+        // Clicked on empty space - clear selection
+        if (clearSelection) {
+          clearSelection();
+        }
       }
     },
-    [findObjectAtPosition, onObjectClicked]
+    [findObjectAtPosition, onObjectClicked, selectedObjects, toggleSelection, setSelection, clearSelection, objects, dimensions]
   );
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
-      if (!isDragging || selectedId === null) return;
+      if (!isDragging || selectedObjects.size === 0) return;
 
       const rect = e.currentTarget.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
 
-      const obj = objects.find((o) => o.session_id === selectedId);
-      if (!obj) return;
+      // Move all selected objects
+      selectedObjects.forEach(sessionId => {
+        const obj = objects.find((o) => o.session_id === sessionId);
+        if (!obj) return;
 
-      // Convert to normalized coordinates
-      const normalized = pixelToNormalized({ x, y }, dimensions);
-      const clamped = clampNormalized(normalized);
+        const offset = dragOffsetsRef.current.get(sessionId) || { x: 0, y: 0 };
 
-      if (onObjectUpdated) {
-        onObjectUpdated(selectedId, clamped.x, clamped.y, obj.angle);
-      }
+        // Apply offset to get object position
+        const objPixelX = x - offset.x;
+        const objPixelY = y - offset.y;
+
+        // Convert to normalized coordinates
+        const normalized = pixelToNormalized({ x: objPixelX, y: objPixelY }, dimensions);
+        const clamped = clampNormalized(normalized);
+
+        if (onObjectUpdated) {
+          onObjectUpdated(sessionId, clamped.x, clamped.y, obj.angle);
+        }
+      });
     },
-    [isDragging, selectedId, objects, dimensions, onObjectUpdated]
+    [isDragging, selectedObjects, objects, dimensions, onObjectUpdated]
   );
 
   const handleMouseUp = useCallback(() => {
     setIsDragging(false);
     dragStartRef.current = null;
+    dragOffsetsRef.current.clear();
   }, []);
 
   const handleWheel = useCallback(
     (e: React.WheelEvent<HTMLCanvasElement>) => {
       e.preventDefault();
 
-      if (selectedId === null) return;
-
-      const obj = objects.find((o) => o.session_id === selectedId);
-      if (!obj) return;
+      if (selectedObjects.size === 0) return;
 
       // Rotate by delta (wheel movement)
       const angleDelta = e.deltaY * 0.01;
-      const newAngle = obj.angle + angleDelta;
 
-      if (onObjectUpdated) {
-        onObjectUpdated(selectedId, obj.x, obj.y, newAngle);
-      }
+      // Rotate all selected objects
+      selectedObjects.forEach(sessionId => {
+        const obj = objects.find((o) => o.session_id === sessionId);
+        if (!obj) return;
+
+        const newAngle = obj.angle + angleDelta;
+
+        if (onObjectUpdated) {
+          onObjectUpdated(sessionId, obj.x, obj.y, newAngle);
+        }
+      });
     },
-    [selectedId, objects, onObjectUpdated]
+    [selectedObjects, objects, onObjectUpdated]
   );
 
   const state: CanvasInteractionState = {

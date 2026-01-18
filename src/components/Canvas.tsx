@@ -10,9 +10,10 @@ interface CanvasProps {
   width: number;
   height: number;
   showGrid?: boolean;
+  selectedObjects?: Set<number>;
 }
 
-export function Canvas({ objects, width, height, showGrid = false }: CanvasProps) {
+export function Canvas({ objects, width, height, showGrid = false, selectedObjects = new Set() }: CanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -33,9 +34,10 @@ export function Canvas({ objects, width, height, showGrid = false }: CanvasProps
     // Draw all objects
     const dimensions: CanvasDimensions = { width, height };
     objects.forEach((obj) => {
-      drawObject(ctx, obj, dimensions);
+      const isSelected = selectedObjects.has(obj.session_id);
+      drawObject(ctx, obj, dimensions, isSelected);
     });
-  }, [objects, width, height, showGrid]);
+  }, [objects, width, height, showGrid, selectedObjects]);
 
   return (
     <canvas
@@ -79,7 +81,8 @@ function drawGrid(ctx: CanvasRenderingContext2D, width: number, height: number) 
 function drawObject(
   ctx: CanvasRenderingContext2D,
   obj: TuioObject,
-  dimensions: CanvasDimensions
+  dimensions: CanvasDimensions,
+  isSelected: boolean = false
 ) {
   // Convert normalized coordinates to pixels
   const pos = normalizedToPixel({ x: obj.x, y: obj.y }, dimensions);
@@ -93,6 +96,15 @@ function drawObject(
 
   // Rotate by object angle
   ctx.rotate(obj.angle);
+
+  // Draw selection ring if selected
+  if (isSelected) {
+    ctx.strokeStyle = "#ffaa00";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(0, 0, radius + 4, 0, Math.PI * 2);
+    ctx.stroke();
+  }
 
   // Draw circle
   ctx.fillStyle = `hsl(${(obj.type_id * 137) % 360}, 70%, 50%)`;
