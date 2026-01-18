@@ -36,7 +36,6 @@ function App() {
 
   const {
     isRunning,
-    port,
     connectedClients,
     frameCount,
     fps,
@@ -48,7 +47,7 @@ function App() {
     initialFps: settings.fps,
   });
 
-  const [interactionState, interactionHandlers] = useCanvasInteraction({
+  const [_interactionState, interactionHandlers] = useCanvasInteraction({
     objects,
     dimensions: { width: canvasWidth, height: canvasHeight },
     selectedObjects,
@@ -149,183 +148,184 @@ function App() {
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar Controls */}
         <div className="w-[400px] shrink-0 bg-gray-800 text-white p-4 overflow-y-auto">
-        {/* Server Controls */}
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold mb-3">Server</h2>
+          {/* Server Controls */}
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold mb-3">Server</h2>
 
-          <div className="space-y-3">
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <label className="block text-sm mb-1">Port</label>
-                <input
-                  type="number"
-                  value={portInput}
-                  onChange={(e) => {
-                    const newPort = parseInt(e.target.value) || 3333;
-                    setPortInput(newPort);
-                    updateSettings({ port: newPort });
-                  }}
-                  disabled={isRunning}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white disabled:opacity-50"
-                />
-              </div>
-              <div className="flex-1">
-                <label className="block text-sm mb-1">FPS</label>
-                <input
-                  type="number"
-                  value={fps}
-                  onChange={(e) => {
-                    const newFps = parseInt(e.target.value);
-                    setFps(newFps);
-                    updateSettings({ fps: newFps });
-                  }}
-                  min="1"
-                  max="120"
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="flex gap-2 mt-3">
-            <button
-              onClick={handleStartServer}
-              disabled={isRunning}
-              className="flex-1 px-3 py-2 bg-green-600 rounded hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-sm font-medium"
-            >
-              Start
-            </button>
-            <button
-              onClick={handleStopServer}
-              disabled={!isRunning}
-              className="flex-1 px-3 py-2 bg-red-600 rounded hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-sm font-medium"
-            >
-              Stop
-            </button>
-          </div>
-        </div>
-
-        {/* Object Controls */}
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold mb-3">Objects</h2>
-
-          {/* Object Type Palette */}
-          <div className="mb-3">
-            <label className="block text-sm mb-2">Object Type</label>
-            <div className="grid grid-cols-5 gap-2">
-              {[1, 2, 3, 4, 5].map((typeId) => {
-                const hue = (typeId * 137) % 360;
-                const isSelected = selectedTypeId === typeId;
-                return (
-                  <button
-                    key={typeId}
-                    onClick={() => setSelectedTypeId(typeId)}
-                    className={`aspect-square rounded flex items-center justify-center text-xs font-medium transition-all ${
-                      isSelected
-                        ? "ring-2 ring-white ring-offset-2 ring-offset-gray-800"
-                        : "hover:ring-1 hover:ring-gray-500"
-                    }`}
-                    style={{
-                      backgroundColor: `hsl(${hue}, 70%, 50%)`,
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="block text-sm mb-1">Port</label>
+                  <input
+                    type="number"
+                    value={portInput}
+                    onChange={(e) => {
+                      const newPort = parseInt(e.target.value) || 3333;
+                      setPortInput(newPort);
+                      updateSettings({ port: newPort });
                     }}
-                    title={`Type ${typeId}`}
-                  >
-                    {typeId}
-                  </button>
-                );
-              })}
+                    disabled={isRunning}
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white disabled:opacity-50"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-sm mb-1">FPS</label>
+                  <input
+                    type="number"
+                    value={fps}
+                    onChange={(e) => {
+                      const newFps = parseInt(e.target.value);
+                      setFps(newFps);
+                      updateSettings({ fps: newFps });
+                    }}
+                    min="1"
+                    max="120"
+                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
+                  />
+                </div>
+              </div>
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <button
-              onClick={handleAddObject}
-              className="w-full px-3 py-2 bg-blue-600 rounded hover:bg-blue-700 text-sm font-medium"
-            >
-              + Add Object (Type {selectedTypeId})
-            </button>
-            <div className="flex gap-2">
+            <div className="flex gap-2 mt-3">
               <button
-                onClick={handleDuplicateSelected}
-                disabled={selectedObjects.size === 0}
+                onClick={handleStartServer}
+                disabled={isRunning}
                 className="flex-1 px-3 py-2 bg-green-600 rounded hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-sm font-medium"
               >
-                Duplicate
+                Start
               </button>
               <button
-                onClick={handleRemoveSelected}
-                disabled={selectedObjects.size === 0}
+                onClick={handleStopServer}
+                disabled={!isRunning}
                 className="flex-1 px-3 py-2 bg-red-600 rounded hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-sm font-medium"
               >
-                Delete
+                Stop
               </button>
             </div>
           </div>
 
-          {/* Property Panel */}
-          <PropertyPanel
-            selectedObjects={selectedObjects}
-            objects={objects}
-            canvasDimensions={{ width: canvasWidth, height: canvasHeight }}
-            onUpdate={updateObject}
-          />
+          {/* Object Controls */}
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold mb-3">Objects</h2>
 
-          <label className="flex items-center gap-2 mt-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={showGrid}
-              onChange={(e) => updateSettings({ showGrid: e.target.checked })}
-              className="w-4 h-4"
-            />
-            <span className="text-sm">Show Grid</span>
-          </label>
-        </div>
+            {/* Object Type Palette */}
+            <div className="mb-3">
+              <label className="block text-sm mb-2">Object Type</label>
+              <div className="grid grid-cols-5 gap-2">
+                {[1, 2, 3, 4, 5].map((typeId) => {
+                  const hue = (typeId * 137) % 360;
+                  const isSelected = selectedTypeId === typeId;
+                  return (
+                    <button
+                      key={typeId}
+                      onClick={() => setSelectedTypeId(typeId)}
+                      className={`aspect-square rounded flex items-center justify-center text-xs font-medium transition-all ${
+                        isSelected
+                          ? "ring-2 ring-white ring-offset-2 ring-offset-gray-800"
+                          : "hover:ring-1 hover:ring-gray-500"
+                      }`}
+                      style={{
+                        backgroundColor: `hsl(${hue}, 70%, 50%)`,
+                      }}
+                      title={`Type ${typeId}`}
+                    >
+                      {typeId}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
-        {/* Instructions */}
-        <div className="text-xs text-gray-400 space-y-1">
-          <p className="font-semibold text-gray-300 mb-1">Mouse:</p>
-          <p>• Click to select</p>
-          <p>• Ctrl/Cmd+Click to multi-select</p>
-          <p>• Drag to move</p>
-          <p>• Scroll to rotate</p>
+            <div className="space-y-2">
+              <button
+                onClick={handleAddObject}
+                className="w-full px-3 py-2 bg-blue-600 rounded hover:bg-blue-700 text-sm font-medium"
+              >
+                + Add Object (Type {selectedTypeId})
+              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleDuplicateSelected}
+                  disabled={selectedObjects.size === 0}
+                  className="flex-1 px-3 py-2 bg-green-600 rounded hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-sm font-medium"
+                >
+                  Duplicate
+                </button>
+                <button
+                  onClick={handleRemoveSelected}
+                  disabled={selectedObjects.size === 0}
+                  className="flex-1 px-3 py-2 bg-red-600 rounded hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-sm font-medium"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
 
-          <p className="font-semibold text-gray-300 mt-2 mb-1">Keyboard:</p>
-          <p>• Del/Backspace: Delete</p>
-          <p>• Ctrl/Cmd+D: Duplicate</p>
-          <p>• Ctrl/Cmd+A: Select all</p>
-          <p>• Esc: Clear selection</p>
-          <p>• Arrow keys: Move (Shift for 10px)</p>
-          <p>• Ctrl/Cmd+←/→: Rotate</p>
-        </div>
-      </div>
-
-      {/* Main Canvas Area */}
-      <div className="flex-1 flex items-center justify-center bg-gray-900 p-4 overflow-auto">
-        <div className="relative">
-          <div
-            style={{
-              transform: `scale(${canvasScale})`,
-              transformOrigin: 'center center',
-            }}
-            className="shadow-2xl"
-          >
-            <Canvas
-              objects={objects}
-              width={canvasWidth}
-              height={canvasHeight}
-              showGrid={showGrid}
+            {/* Property Panel */}
+            <PropertyPanel
               selectedObjects={selectedObjects}
-              onMouseDown={interactionHandlers.handleMouseDown}
-              onMouseMove={interactionHandlers.handleMouseMove}
-              onMouseUp={interactionHandlers.handleMouseUp}
-              onWheel={interactionHandlers.handleWheel}
+              objects={objects}
+              canvasDimensions={{ width: canvasWidth, height: canvasHeight }}
+              onUpdate={updateObject}
             />
+
+            <label className="flex items-center gap-2 mt-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showGrid}
+                onChange={(e) => updateSettings({ showGrid: e.target.checked })}
+                className="w-4 h-4"
+              />
+              <span className="text-sm">Show Grid</span>
+            </label>
           </div>
-          <div className="absolute -bottom-8 left-0 right-0 text-center text-xs text-gray-500">
-            {canvasWidth}×{canvasHeight}px @ {Math.round(canvasScale * 100)}% scale
+
+          {/* Instructions */}
+          <div className="text-xs text-gray-400 space-y-1">
+            <p className="font-semibold text-gray-300 mb-1">Mouse:</p>
+            <p>• Click to select</p>
+            <p>• Ctrl/Cmd+Click to multi-select</p>
+            <p>• Drag to move</p>
+            <p>• Scroll to rotate</p>
+
+            <p className="font-semibold text-gray-300 mt-2 mb-1">Keyboard:</p>
+            <p>• Del/Backspace: Delete</p>
+            <p>• Ctrl/Cmd+D: Duplicate</p>
+            <p>• Ctrl/Cmd+A: Select all</p>
+            <p>• Esc: Clear selection</p>
+            <p>• Arrow keys: Move (Shift for 10px)</p>
+            <p>• Ctrl/Cmd+←/→: Rotate</p>
           </div>
         </div>
-      </div>
+
+        {/* Main Canvas Area */}
+        <div className="flex-1 flex items-center justify-center bg-gray-900 p-4 overflow-auto">
+          <div className="relative">
+            <div
+              style={{
+                transform: `scale(${canvasScale})`,
+                transformOrigin: "center center",
+              }}
+              className="shadow-2xl"
+            >
+              <Canvas
+                objects={objects}
+                width={canvasWidth}
+                height={canvasHeight}
+                showGrid={showGrid}
+                selectedObjects={selectedObjects}
+                onMouseDown={interactionHandlers.handleMouseDown}
+                onMouseMove={interactionHandlers.handleMouseMove}
+                onMouseUp={interactionHandlers.handleMouseUp}
+                onWheel={interactionHandlers.handleWheel}
+              />
+            </div>
+            <div className="absolute -bottom-8 left-0 right-0 text-center text-xs text-gray-500">
+              {canvasWidth}×{canvasHeight}px @ {Math.round(canvasScale * 100)}%
+              scale
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Status Bar */}

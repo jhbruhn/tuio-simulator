@@ -88,7 +88,7 @@ pub async fn add_object(
         session_id,
         type_id,
         user_id: 0,
-        component_id: 0,
+        component_id: type_id,
         x,
         y,
         angle: 0.0,
