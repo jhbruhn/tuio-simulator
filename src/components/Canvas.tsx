@@ -11,9 +11,23 @@ interface CanvasProps {
   height: number;
   showGrid?: boolean;
   selectedObjects?: Set<number>;
+  onMouseDown?: (e: React.MouseEvent<HTMLCanvasElement>) => void;
+  onMouseMove?: (e: React.MouseEvent<HTMLCanvasElement>) => void;
+  onMouseUp?: (e: React.MouseEvent<HTMLCanvasElement>) => void;
+  onWheel?: (e: React.WheelEvent<HTMLCanvasElement>) => void;
 }
 
-export function Canvas({ objects, width, height, showGrid = false, selectedObjects = new Set() }: CanvasProps) {
+export function Canvas({
+  objects,
+  width,
+  height,
+  showGrid = false,
+  selectedObjects = new Set(),
+  onMouseDown,
+  onMouseMove,
+  onMouseUp,
+  onWheel,
+}: CanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -45,6 +59,10 @@ export function Canvas({ objects, width, height, showGrid = false, selectedObjec
       width={width}
       height={height}
       className="border border-gray-300 bg-white"
+      onMouseDown={onMouseDown}
+      onMouseMove={onMouseMove}
+      onMouseUp={onMouseUp}
+      onWheel={onWheel}
     />
   );
 }

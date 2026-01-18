@@ -302,10 +302,6 @@ function App() {
       <div className="flex-1 flex items-center justify-center bg-gray-900 p-4 overflow-auto">
         <div className="relative">
           <div
-            onMouseDown={interactionHandlers.handleMouseDown}
-            onMouseMove={interactionHandlers.handleMouseMove}
-            onMouseUp={interactionHandlers.handleMouseUp}
-            onWheel={interactionHandlers.handleWheel}
             style={{
               transform: `scale(${canvasScale})`,
               transformOrigin: 'center center',
@@ -318,6 +314,10 @@ function App() {
               height={canvasHeight}
               showGrid={showGrid}
               selectedObjects={selectedObjects}
+              onMouseDown={interactionHandlers.handleMouseDown}
+              onMouseMove={interactionHandlers.handleMouseMove}
+              onMouseUp={interactionHandlers.handleMouseUp}
+              onWheel={interactionHandlers.handleWheel}
             />
           </div>
           <div className="absolute -bottom-8 left-0 right-0 text-center text-xs text-gray-500">
