@@ -60,7 +60,7 @@ export function useCanvasInteraction({
    */
   const findObjectAtPosition = useCallback(
     (x: number, y: number): TuioObject | null => {
-      const radius = 20; // Same as rendering radius
+      const radius = 40; // Same as rendering radius
 
       for (const obj of objects) {
         const objX = obj.x * dimensions.width;

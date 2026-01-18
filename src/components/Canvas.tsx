@@ -121,7 +121,7 @@ function drawObject(
   // Convert normalized coordinates to pixels
   const pos = normalizedToPixel({ x: obj.x, y: obj.y }, dimensions);
 
-  const radius = 20; // Object radius in pixels
+  const radius = 40; // Object radius in pixels
 
   ctx.save();
 
