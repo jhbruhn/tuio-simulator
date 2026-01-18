@@ -174,6 +174,56 @@ function App() {
             )}
           </div>
 
+          {/* Rotation Controls */}
+          {interactionState.selectedId && (() => {
+            const selectedObj = objects.find(o => o.session_id === interactionState.selectedId);
+            if (!selectedObj) return null;
+            const angleDeg = Math.round((selectedObj.angle * 180) / Math.PI);
+
+            const handleRotationChange = async (newAngleDeg: number) => {
+              const newAngleRad = (newAngleDeg * Math.PI) / 180;
+              try {
+                await updateObject(selectedObj.session_id, selectedObj.x, selectedObj.y, newAngleRad);
+              } catch (err) {
+                console.error("Failed to update rotation:", err);
+              }
+            };
+
+            return (
+              <div className="mt-3 pt-3 border-t border-gray-700">
+                <h3 className="text-sm font-semibold mb-2">Rotation</h3>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleRotationChange(angleDeg - 15)}
+                      className="px-2 py-1 bg-gray-700 rounded hover:bg-gray-600 text-sm"
+                    >
+                      -15°
+                    </button>
+                    <input
+                      type="number"
+                      value={angleDeg}
+                      onChange={(e) => handleRotationChange(parseInt(e.target.value) || 0)}
+                      className="flex-1 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm text-center"
+                    />
+                    <button
+                      onClick={() => handleRotationChange(angleDeg + 15)}
+                      className="px-2 py-1 bg-gray-700 rounded hover:bg-gray-600 text-sm"
+                    >
+                      +15°
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => handleRotationChange(0)}
+                    className="w-full px-2 py-1 bg-gray-700 rounded hover:bg-gray-600 text-xs"
+                  >
+                    Reset to 0°
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
+
           <label className="flex items-center gap-2 mt-3 cursor-pointer">
             <input
               type="checkbox"
