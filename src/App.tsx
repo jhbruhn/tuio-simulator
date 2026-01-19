@@ -242,22 +242,28 @@ function App() {
             </label>
 
             <div className="mt-3">
-              <label className="block text-sm mb-1">Aspect Ratio</label>
-              <select
-                value={formatAspectRatio(aspectRatio)}
-                onChange={(e) => {
-                  const ratioStr = e.target.value;
-                  const [width, height] = ratioStr.split(':').map(Number);
-                  updateSettings({ aspectRatio: width / height });
-                }}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm"
-              >
-                <option value="16:9">16:9 (Widescreen)</option>
-                <option value="16:10">16:10 (Wide)</option>
-                <option value="4:3">4:3 (Standard)</option>
-                <option value="21:9">21:9 (Ultrawide)</option>
-                <option value="1:1">1:1 (Square)</option>
-              </select>
+              <label className="block text-sm mb-2">Aspect Ratio</label>
+              <div className="grid grid-cols-3 gap-1.5">
+                {[
+                  { label: '16:9', ratio: 16 / 9 },
+                  { label: '16:10', ratio: 16 / 10 },
+                  { label: '4:3', ratio: 4 / 3 },
+                  { label: '21:9', ratio: 21 / 9 },
+                  { label: '1:1', ratio: 1 / 1 },
+                ].map((preset) => (
+                  <button
+                    key={preset.label}
+                    onClick={() => updateSettings({ aspectRatio: preset.ratio })}
+                    className={`px-2 py-1.5 rounded text-xs font-medium transition-colors ${
+                      Math.abs(aspectRatio - preset.ratio) < 0.001
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
