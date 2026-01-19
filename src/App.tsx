@@ -11,6 +11,7 @@ import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useSettings } from "./hooks/useSettings";
 import { useCanvasDimensions } from "./hooks/useCanvasDimensions";
 import { pixelToNormalized, clampNormalized } from "./utils/coordinates";
+import { formatAspectRatio } from "./utils/aspectRatio";
 
 function App() {
   const { settings, updateSettings } = useSettings();
@@ -79,6 +80,8 @@ function App() {
 
   const handleStartServer = async () => {
     try {
+      // Ensure backend uses frontend's configured FPS before starting
+      await setFps(settings.fps);
       await startServer(portInput);
     } catch (err) {
       console.error("Failed to start server:", err);
@@ -237,6 +240,25 @@ function App() {
               />
               <span className="text-sm">Show Grid</span>
             </label>
+
+            <div className="mt-3">
+              <label className="block text-sm mb-1">Aspect Ratio</label>
+              <select
+                value={formatAspectRatio(aspectRatio)}
+                onChange={(e) => {
+                  const ratioStr = e.target.value;
+                  const [width, height] = ratioStr.split(':').map(Number);
+                  updateSettings({ aspectRatio: width / height });
+                }}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm"
+              >
+                <option value="16:9">16:9 (Widescreen)</option>
+                <option value="16:10">16:10 (Wide)</option>
+                <option value="4:3">4:3 (Standard)</option>
+                <option value="21:9">21:9 (Ultrawide)</option>
+                <option value="1:1">1:1 (Square)</option>
+              </select>
+            </div>
           </div>
 
           {/* Instructions */}
@@ -283,7 +305,7 @@ function App() {
                 />
               </div>
               <div className="absolute -bottom-8 left-0 right-0 text-center text-xs text-gray-500">
-                {canvasWidth}×{canvasHeight}px ({aspectRatio.toFixed(2)}:1)
+                {canvasWidth}×{canvasHeight}px ({formatAspectRatio(aspectRatio)})
               </div>
             </div>
           </div>
