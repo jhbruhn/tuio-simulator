@@ -5,6 +5,7 @@ use rosc::{encoder, OscBundle, OscPacket, OscTime};
 
 /// Message type for TUIO objects
 #[derive(Debug, Clone, Copy)]
+#[allow(dead_code)]
 pub enum MessageType {
     Token,  // TOK - Tagged tangible objects (fiducials)
     Pointer, // PTR - Pointing gestures (touch, stylus)

@@ -110,7 +110,7 @@ export const OscDebugger: React.FC<OscDebuggerProps> = ({ isOpen, onToggle }) =>
 
   if (!isOpen) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 z-40">
+      <div className="shrink-0">
         <button
           onClick={onToggle}
           className="w-full bg-gray-800 hover:bg-gray-700 text-white py-2 text-sm font-medium border-t border-gray-700 transition-colors"
@@ -128,7 +128,7 @@ export const OscDebugger: React.FC<OscDebuggerProps> = ({ isOpen, onToggle }) =>
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-700 flex flex-col z-40"
+      className="shrink-0 bg-gray-800 border-t border-gray-700 flex flex-col"
       style={{ height: `${height}px` }}
     >
       {/* Resize Handle */}

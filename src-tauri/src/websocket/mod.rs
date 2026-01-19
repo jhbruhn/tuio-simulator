@@ -34,6 +34,7 @@ impl WebSocketServer {
     }
 
     /// Get the broadcast sender for sending messages to all clients
+    #[allow(dead_code)]
     pub fn get_broadcaster(&self) -> BroadcastSender {
         self.broadcast_tx.clone()
     }

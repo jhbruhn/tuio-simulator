@@ -187,7 +187,7 @@ function App() {
 
   return (
     <div className="flex flex-col h-screen bg-gray-900">
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden min-h-0">
         {/* Sidebar Controls */}
         <div className="w-[320px] shrink-0 bg-gray-800 text-white p-4 overflow-y-auto">
           {/* Server Controls */}
